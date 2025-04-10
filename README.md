@@ -11,11 +11,12 @@ SecDrive is a security-focused cloud storage application that prioritizes user d
 - Secure file sharing with granular permission controls
 
 ## Technology Stack
-- Frontend: React.js with encryption libraries
-- Backend: AWS Lambda, API Gateway
+- Frontend: VueJS with TailwindCSS
+- Backend: AWS Lambda function written in GO, HTTP API Gateway
 - Storage: AWS S3, AWS DynamoDB
-- Security: AWS KMS for key management and client-side encryption, Cognito for authentication
+- Security: AWS KMS for key management and client-side encryption, Cognito for authentication, ACM for TLS certificates
 - Monitoring: CloudWatch and AWS Shield for threat detection
+- Additional: Route53 for custom domain names
 
 ## AWS Architecture
 ![AWS Architecture Diagram](docs/images/s4pp.png)
