@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import DashboardLayout from '@/components/DashboardLayout.vue';
 </script>
 
 <template>
-  <HelloWorld />
+  <DashboardLayout />
 </template>
+
+<style>
+@import '@/assets/style.css';
+</style>
