@@ -27,9 +27,9 @@ resource "aws_iam_policy" "lambda_policy" { // Create a policy for the Lambda fu
         ],
         "Effect" : "Allow",
         "Resource" : [
-            aws_dynamodb_table.secdrive_user_files.arn,
-            "${aws_dynamodb_table.secdrive_user_files.arn}/index/secdrive_user_id_index",
-            aws_dynamodb_table.secdrive_users.arn,
+          aws_dynamodb_table.secdrive_user_files.arn,
+          "${aws_dynamodb_table.secdrive_user_files.arn}/index/secdrive_user_id_index",
+          aws_dynamodb_table.secdrive_users.arn,
         ]
       },
       {

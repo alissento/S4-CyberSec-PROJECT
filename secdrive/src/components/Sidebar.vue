@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
-import { LogOut, Settings, LayoutGrid, Moon, Sun, Folder, Users, Trash } from 'lucide-vue-next';
+import { LogOut, Settings, Moon, Sun, Folder, Users, Trash, Shield } from 'lucide-vue-next';
 
 const isDarkMode = ref(false);
 function toggleDarkMode() {
@@ -60,7 +60,7 @@ function navigateTo(path: string) {
   <aside class="fixed inset-y-0 left-0 z-10 flex h-full w-54 flex-col border-r bg-background">
     <div class="flex h-14 items-center border-b px-6">
       <a href="/" class="flex items-center gap-2 font-semibold">
-        <LayoutGrid class="h-6 w-6" />
+        <Shield class="h-6 w-6" />
         <span>SecDrive</span>
       </a>
     </div>

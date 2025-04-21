@@ -1,7 +1,7 @@
 // This file is used to create the API Gateway for the project
 resource "aws_apigatewayv2_api" "api_gw_secdrive" { // Create an API Gateway
-  name          = "api-gateway-secdrive" // The name of the API Gateway
-  protocol_type = "HTTP" // The protocol used by the API Gateway
+  name          = "api-gateway-secdrive"            // The name of the API Gateway
+  protocol_type = "HTTP"                            // The protocol used by the API Gateway
 
   cors_configuration {
     allow_origins = ["*"] // Allow the origin of the request

@@ -20,7 +20,7 @@ const files = ref([
   { id: 6, name: 'logo.svg', type: 'img', size: '8 KB', modified: '2024-02-28 16:45 PM', isFolder: false, url: '/download/6' },
 ]);
 
-function getFileIcon(file) {
+function getFileIcon(file: { isFolder: any; }) {
   if (file.isFolder) {
     return Folder;
   }
@@ -31,7 +31,7 @@ function handleUploadClick() {
     console.log("Upload button clicked");
 }
 
-function handleDownload(event, file) {
+function handleDownload(event: { preventDefault: () => void; }, file: { url: any; isFolder: any; name: any; }) {
   if (!file || !file.url || file.isFolder) return;
 
 
@@ -40,7 +40,7 @@ function handleDownload(event, file) {
   console.log(`Initiating download for: ${file.name} from ${file.url}`);
 }
 
-function handleRowClick(file) {
+function handleRowClick(file: { isFolder: any; name: any; }) {
     if (file.isFolder) {
         console.log(`Navigating into folder: ${file.name}`);
     }

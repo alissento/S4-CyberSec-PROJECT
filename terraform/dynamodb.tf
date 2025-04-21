@@ -1,7 +1,7 @@
 resource "aws_dynamodb_table" "secdrive_user_files" { // Create a DynamoDB table for the user files
   name         = "secdrive_user_files"
   billing_mode = local.dynamodb_billing_mode // Set the billing mode to pay per request
-  hash_key     = "file_id"                // Set the hash key (primary key) to product_id
+  hash_key     = "file_id"                   // Set the hash key (primary key) to product_id
 
   attribute {
     name = "file_id"
