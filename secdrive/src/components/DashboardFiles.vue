@@ -49,28 +49,23 @@ function handleRowClick(file: { isFolder: any; name: any; }) {
 </script>
 
 <template>
-  <div>
-     <div class="flex flex-wrap justify-between items-center gap-4 mb-6 mt-6">
-        <h1 class="text-2xl font-semibold tracking-tight">
-            Your Files
-        </h1>
-        <Button @click="handleUploadClick">
-            <Upload class="mr-2 h-4 w-4" /> Upload File
-        </Button>
-     </div>
-
-    <div class="rounded-md border overflow-x-auto">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6 mt-6">
+      <h1 class="text-3xl font-semibold text-white">Your Files</h1>
+      <Button @click="handleUploadClick" variant="primary" class="bg-indigo-600 hover:bg-indigo-700">
+        <Upload class="mr-2 h-4 w-4" /> Upload File
+      </Button>
+    </div>
+    <div class="bg-card rounded-lg shadow overflow-x-auto p-4">
       <Table>
         <TableHeader>
           <TableRow>
-             <TableHead class="w-[50px]">
-                <Checkbox id="select-all" />
-             </TableHead>
-            <TableHead class="min-w-[250px] w-[40%] lg:w-[50%]">Name</TableHead>
-            <TableHead class="min-w-[80px]">Type</TableHead>
-            <TableHead class="min-w-[100px]">Size</TableHead>
-            <TableHead class="min-w-[150px] text-right">Last Modified</TableHead>
-            <TableHead class="w-[100px] text-center">Actions</TableHead>
+             <TableHead class="w-[50px]"><input type="checkbox" class="h-4 w-4 text-indigo-500" /></TableHead>
+             <TableHead class="min-w-[250px] w-[40%] lg:w-[50%] text-gray-400">Name</TableHead>
+             <TableHead class="min-w-[80px] text-gray-400">Type</TableHead>
+             <TableHead class="min-w-[100px] text-gray-400">Size</TableHead>
+             <TableHead class="min-w-[150px] text-right text-gray-400">Last Modified</TableHead>
+             <TableHead class="w-[100px] text-center text-gray-400">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -82,7 +77,7 @@ function handleRowClick(file: { isFolder: any; name: any; }) {
              @click="handleRowClick(file)"
           >
              <TableCell>
-                <Checkbox :id="`select-${file.id}`" />
+                <input type="checkbox" :id="`select-${file.id}`" class="h-4 w-4 text-indigo-500" />
              </TableCell>
 
             <TableCell class="font-medium">
@@ -127,7 +122,7 @@ function handleRowClick(file: { isFolder: any; name: any; }) {
           </TableRow>
 
           <TableRow v-if="files.length === 0">
-             <TableCell colspan="5" class="text-center text-muted-foreground py-8 h-48">
+             <TableCell colspan="6" class="text-center text-muted-foreground py-8 h-48">
                 No files found. Upload your first file!
              </TableCell>
           </TableRow>
