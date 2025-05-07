@@ -15,12 +15,12 @@ import { Button } from '@/components/ui/button'
     </p>
     <div class="space-x-4">
       <router-link to="/signup">
-        <Button variant="primary" size="lg" class="bg-indigo-600 hover:bg-indigo-700">
+        <Button size="lg" class="bg-indigo-600 hover:bg-indigo-700">
           Sign Up
         </Button>
       </router-link>
       <router-link to="/login">
-        <Button variant="secondary" size="lg" class="border-gray-500 text-gray-200 hover:bg-gray-800">
+        <Button size="lg" class="border-gray-500 text-gray-200 hover:bg-gray-800">
           Log In
         </Button>
       </router-link>

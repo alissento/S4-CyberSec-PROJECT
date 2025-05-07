@@ -42,7 +42,7 @@ function saveSettings() {
           </div>
         </CardContent>
         <CardFooter class="mt-6 flex justify-center">
-          <Button type="submit" variant="primary" class="bg-indigo-600">Save Changes</Button>
+          <Button type="submit" class="bg-indigo-600">Save Changes</Button>
         </CardFooter>
       </form>
     </Card>

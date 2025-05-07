@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
           placeholder="Password"
           class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
         />
-        <Button type="submit" variant="primary" class="w-full bg-indigo-600 hover:bg-indigo-700">Login</Button>
+        <Button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700">Login</Button>
       </form>
       <p class="mt-4 text-center text-sm text-gray-300">
         Don't have an account? <router-link to="/signup" class="text-indigo-500 underline">Sign Up</router-link>
