@@ -52,7 +52,7 @@ function handleRowClick(file: { isFolder: any; name: any; }) {
   <div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6 mt-6">
       <h1 class="text-3xl font-semibold text-white">Your Files</h1>
-      <Button @click="handleUploadClick" class="bg-indigo-600 hover:bg-indigo-700">
+      <Button @click="handleUploadClick" class="bg-indigo-600 hover:bg-indigo-700 text-white">
         <Upload class="mr-2 h-4 w-4" /> Upload File
       </Button>
     </div>

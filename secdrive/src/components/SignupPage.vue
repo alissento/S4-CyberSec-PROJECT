@@ -9,7 +9,12 @@ import { Button } from '@/components/ui/button'
       <form class="space-y-4">
         <input
           type="text"
-          placeholder="Full Name"
+          placeholder="First Name"
+          class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
+        />
+        <input
+          type="text"
+          placeholder="Last Name"
           class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
         />
         <input
@@ -27,7 +32,7 @@ import { Button } from '@/components/ui/button'
           placeholder="Confirm Password"
           class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
         />
-        <Button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700">Sign Up</Button>
+        <Button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Sign Up</Button>
       </form>
       <p class="mt-4 text-center text-sm text-gray-300">
         Already have an account? <router-link to="/login" class="text-indigo-500 underline">Login</router-link>

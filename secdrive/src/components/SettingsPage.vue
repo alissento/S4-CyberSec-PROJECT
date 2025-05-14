@@ -25,8 +25,12 @@ function saveSettings() {
       <form @submit.prevent="saveSettings">
         <CardContent class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-muted-foreground">Full Name</label>
-            <input v-model="fullName" type="text" placeholder="Full Name" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+            <label class="block text-sm font-medium text-muted-foreground">First Name</label>
+            <input v-model="fullName" type="text" placeholder="First Name" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-muted-foreground">Last Name</label>
+            <input v-model="fullName" type="text" placeholder="Last Name" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground">Email Address</label>
