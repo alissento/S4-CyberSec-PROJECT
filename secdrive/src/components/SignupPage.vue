@@ -1,11 +1,12 @@
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { auth, apiURL } from '@/config.ts';
+  import { auth, apiURL } from '@/config';
   import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
   import router from '@/router/index.js';
   import { onMounted } from 'vue';
-  import loginCheck from '@/logincheck.ts';
+  import loginCheck from '@/logincheck';
   import { Button } from '@/components/ui/button'
+  import { toast } from 'vue-sonner'
 
   const firstName = ref('');
   const lastName = ref('');
@@ -16,18 +17,18 @@
   async function registerIn() {
 
     if (!firstName || !lastName || !email || !password || !repeatPassword) {
-      alert('Please fill in all fields');
+      toast.error('Please fill in all fields', { style: { backgroundColor: 'red' } });
       return;
     }
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email.value)) {
-      alert('Please enter a valid email address');
+      toast.error('Please enter a valid email address', { style: { backgroundColor: 'red' } });
       return;
     }
 
     if (password.value !== repeatPassword.value) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match', { style: { backgroundColor: 'red' } });
       return;
     }
 
@@ -37,7 +38,7 @@
       console.log('User:', user);
       console.log('User id:', user.uid);
 
-      alert('Successfully registered');
+      toast.success('Successfully registered', { style: { backgroundColor: 'green' } });
             
       storeUserData();
 
@@ -46,10 +47,11 @@
 
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
-        alert('Email already in use');
+        console.error('Error:', error);
+        toast.error('Email already in use', { style: { backgroundColor: 'red' } });
       } else {
         console.error('Error:', error);
-        alert('An error occurred while registering');
+        toast.error('An error occurred while registering', { style: { backgroundColor: 'red' } });
       }
     }
   }
@@ -71,7 +73,7 @@
     };
 
     try {
-      const response = await fetch(`${fullApiUrl}?operation=register`, {
+      await fetch(`${fullApiUrl}?operation=register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -91,7 +93,7 @@
 </script>
 
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black px-4">
+  <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-900 to-black px-4">
     <div class="w-full max-w-md bg-card p-8 rounded-lg shadow-md">
       <h2 class="text-2xl font-semibold mb-6 text-center text-white">Create Your SecDrive Account</h2>
       <form class="space-y-4">
@@ -125,10 +127,15 @@
           placeholder="Confirm Password"
           class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
         />
-        <Button type="button" @click="registerIn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Sign Up</Button>
+        <Button 
+        type="button"
+         @click="registerIn"
+         class="w-full bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+         >
+         Sign Up</Button>
       </form>
       <p class="mt-4 text-center text-sm text-gray-300">
-        Already have an account? <router-link to="/login" class="text-indigo-500 underline">Login</router-link>
+        Already have an account? <router-link to="/login" class="text-indigo-500 underline ">Login</router-link>
       </p>
     </div>
   </div>

@@ -1,27 +1,27 @@
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { auth } from '@/config.ts';
+  import { auth } from '@/config';
   import { signInWithEmailAndPassword } from 'firebase/auth';
   import router from '@/router/index.js';
   import { onMounted } from 'vue';
   import { Button } from '@/components/ui/button'
-  import loginCheck from '@/logincheck.ts';
-  import { useUserStore } from '@/stores/userStore.ts'
+  import loginCheck from '@/logincheck';
+  import { useUserStore } from '@/stores/userStore'
+  import { toast } from 'vue-sonner'
 
   const userStore = useUserStore();
   const email = ref('');
   const password = ref('');
-
   async function signIn() {
 
         if (email.value === '' || password.value === '') {
-            alert('Please fill in all fields');
+            toast.error('Please fill in all fields', { style: { backgroundColor: 'red' } });
             return;
         }
 
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email.value)) {
-            alert('Please enter a valid email address');
+            toast.error('Please enter a valid email address', { style: { backgroundColor: 'red' } });
             return;
         }
 
@@ -31,16 +31,16 @@
             console.log('User:', user);
             console.log('User id:', user.uid);
 
-            alert('Successfully logged in');
+            toast.success('Successfully logged in', { style: { backgroundColor: 'green' } });
             userStore.fetchUserData(user.uid);
             router.push('/dashboard');
         } catch (error: any) {
             if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/invalid-credential') {
               console.error('Error:', error);  
-              alert('Invalid login credentials');
+              toast.error('Invalid login credentials', { style: { backgroundColor: 'red' } });
             } else {
                 console.error('Error:', error);
-                alert('An error occurred while logging in');
+                toast.error('An error occurred while logging in', { style: { backgroundColor: 'red' } });
             }
         }
     }
@@ -51,7 +51,7 @@
 </script>
 
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black px-4">
+  <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-900 to-black px-4">
     <div class="w-full max-w-md bg-card p-8 rounded-lg shadow-md">
       <h2 class="text-2xl font-semibold mb-6 text-center text-white">Login to SecDrive</h2>
       <form class="space-y-4">
@@ -67,7 +67,13 @@
           placeholder="Password"
           class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
         />
-        <Button type="button" @click="signIn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Login</Button>
+        <Button 
+          type="button" 
+          @click="signIn" 
+          class="w-full bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+          >
+          Login
+        </Button>
       </form>
       <p class="mt-4 text-center text-sm text-gray-300">
         Don't have an account? <router-link to="/signup" class="text-indigo-500 underline">Sign Up</router-link>

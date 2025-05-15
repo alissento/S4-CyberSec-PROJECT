@@ -1,4 +1,4 @@
-import { auth } from '@/config.ts';
+import { auth } from '@/config';
 import { onAuthStateChanged } from 'firebase/auth';
 import router from '@/router/index.js';
 

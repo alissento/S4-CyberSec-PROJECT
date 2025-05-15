@@ -47,7 +47,7 @@ resource "aws_s3_bucket_policy" "bucket_policy_for_website" { // Setting the buc
 }
 
 resource "aws_s3_bucket" "s3_user_data" {
-  bucket        = "secdrive-user-data-nknez"
+  bucket        = "secdrive-user-files-nknez"
   force_destroy = true
 }
 

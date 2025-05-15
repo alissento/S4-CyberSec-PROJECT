@@ -26,27 +26,27 @@ function saveSettings() {
         <CardContent class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-muted-foreground">First Name</label>
-            <input v-model="fullName" type="text" placeholder="First Name" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+            <input v-model="fullName" type="text" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground">Last Name</label>
-            <input v-model="fullName" type="text" placeholder="Last Name" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+            <input v-model="fullName" type="text" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground">Email Address</label>
-            <input v-model="email" type="email" placeholder="Email Address" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+            <input v-model="email" type="email" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground">New Password</label>
-            <input v-model="newPassword" type="password" placeholder="New Password" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+            <input v-model="newPassword" type="password" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
           </div>
           <div>
             <label class="block text-sm font-medium text-muted-foreground">Confirm Password</label>
-            <input v-model="confirmPassword" type="password" placeholder="Confirm Password" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+            <input v-model="confirmPassword" type="password" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
           </div>
         </CardContent>
         <CardFooter class="mt-6 flex justify-center">
-          <Button type="submit" class="bg-indigo-600">Save Changes</Button>
+          <Button type="submit" class="bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">Save Changes</Button>
         </CardFooter>
       </form>
     </Card>

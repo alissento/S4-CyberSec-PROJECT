@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 
 <template>
   <div
-    class="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black text-center px-4"
+    class="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-900 to-black text-center px-4"
   >
     <h1 class="text-5xl font-bold mb-4 text-white drop-shadow-lg">
       Welcome to SecDrive
@@ -15,12 +15,12 @@ import { Button } from '@/components/ui/button'
     </p>
     <div class="space-x-4">
       <router-link to="/signup">
-        <Button size="lg" class="bg-indigo-600 hover:bg-indigo-700 text-white">
+        <Button size="lg" class="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer">
           Sign Up
         </Button>
       </router-link>
       <router-link to="/login">
-        <Button size="lg" class="border-gray-500 text-black hover:bg-gray-400">
+        <Button size="lg" class="border-gray-500 text-black hover:bg-gray-400 cursor-pointer">
           Log In
         </Button>
       </router-link>

@@ -8,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+// import { auth, apiURL } from '@/config';
 import { FileText, Folder, Upload, Download } from 'lucide-vue-next';
 import { ref } from 'vue';
 
@@ -27,8 +28,32 @@ function getFileIcon(file: { isFolder: any; }) {
   return FileText;
 }
 
-function handleUploadClick() {
-    console.log("Upload button clicked");
+async function uploadFile() {
+  
+  console.log('work in progress');
+
+  // const user = auth.currentUser;
+  // const fullApiUrl = apiURL + '/uploadFile';
+    
+  // if (!user) {
+  //   console.error('No user is currently signed in.');
+  //   return;
+  // }
+
+
+  // try {
+  //   await fetch(`${fullApiUrl}?operation=register`, {
+  //   method: 'POST',
+  //   headers: {
+  //       'Content-Type': 'application/json'
+  //   },
+  //     body: JSON.stringify(requestData)
+  //   });
+
+  //     console.log('Data stored successfully');
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //   }
 }
 
 function handleDownload(event: { preventDefault: () => void; }, file: { url: any; isFolder: any; name: any; }) {
@@ -52,7 +77,7 @@ function handleRowClick(file: { isFolder: any; name: any; }) {
   <div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6 mt-6">
       <h1 class="text-3xl font-semibold text-white">Your Files</h1>
-      <Button @click="handleUploadClick" class="bg-indigo-600 hover:bg-indigo-700 text-white">
+      <Button @click="uploadFile" class="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer">
         <Upload class="mr-2 h-4 w-4" /> Upload File
       </Button>
     </div>
