@@ -6,7 +6,7 @@ export const useUserStore = defineStore('user', {
         userData: null,
     }),
     actions: {
-        async fetchUserData(userId) {
+        async fetchUserData(userId: any) {
             if (this.userData) {
                 return;
             }

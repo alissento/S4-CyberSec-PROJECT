@@ -1,10 +1,10 @@
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { auth, apiURL } from '@/config.js';
+  import { auth, apiURL } from '@/config.ts';
   import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
   import router from '@/router/index.js';
   import { onMounted } from 'vue';
-  import loginCheck from '@/logincheck';
+  import loginCheck from '@/logincheck.ts';
   import { Button } from '@/components/ui/button'
 
   const firstName = ref('');
@@ -57,6 +57,12 @@
   async function storeUserData() {
     const user = auth.currentUser;
     const fullApiUrl = apiURL + '/storeUserData';
+    
+    if (!user) {
+      console.error('No user is currently signed in.');
+      return;
+    }
+    
     const requestData = {
       user_id: user.uid,
       email: email.value,

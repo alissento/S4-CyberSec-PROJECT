@@ -12,10 +12,10 @@
   import { Separator } from '@/components/ui/separator'
   import { LogOut, Settings, Folder, Shield, UserRound } from 'lucide-vue-next';
   import router from '@/router/index.js'
-  import { auth } from '@/config'
+  import { auth } from '@/config.ts'
   import { ref, onMounted } from 'vue'
   import { signOut } from 'firebase/auth'
-  import { useUserStore } from '@/stores/userStore.js'
+  import { useUserStore } from '@/stores/userStore.ts'
 
   const firstName = ref('');
   const lastName = ref('');
@@ -38,13 +38,18 @@
 
   async function populateUserData() {
     const user = auth.currentUser;
-    console.log('User:', user);
+    if (!user) {
+      console.error('No user is currently logged in');
+      return;
+    }
     await userStore.fetchUserData(user.uid);
     const data = userStore.getUserData;
     console.log('User data:', data);
-    if (data.first_name) firstName.value = data.first_name;
-    if (data.last_name) lastName.value = data.last_name;
-    if (data.email) email.value = data.email;
+    if (data) {
+      if (data.first_name) firstName.value = data.first_name;
+      if (data.last_name) lastName.value = data.last_name;
+      if (data.email) email.value = data.email;
+    }
 
     console.log('First Name:', firstName.value);
     console.log('Last Name:', lastName.value);

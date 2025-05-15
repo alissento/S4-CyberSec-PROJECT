@@ -1,12 +1,12 @@
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { auth } from '@/config.js';
+  import { auth } from '@/config.ts';
   import { signInWithEmailAndPassword } from 'firebase/auth';
   import router from '@/router/index.js';
   import { onMounted } from 'vue';
   import { Button } from '@/components/ui/button'
-  import loginCheck from '@/logincheck';
-  import { useUserStore } from '@/stores/userStore.js'
+  import loginCheck from '@/logincheck.ts';
+  import { useUserStore } from '@/stores/userStore.ts'
 
   const userStore = useUserStore();
   const email = ref('');
