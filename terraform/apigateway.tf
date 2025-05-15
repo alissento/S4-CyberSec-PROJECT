@@ -78,25 +78,44 @@ resource "aws_route53_record" "custom_domain_api_gw_record" {
   }
 }
 
-# resource "aws_apigatewayv2_integration" "load_products_integration" { // Create an integration for the kits listing
-#   api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
-#   integration_type = "AWS_PROXY"
-#   integration_uri  = aws_lambda_function.list_products.invoke_arn
-# }
+resource "aws_apigatewayv2_integration" "store_user_data_integration" { // Create an integration for the kits listing
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.store_user_data.invoke_arn
+}
 
-# resource "aws_apigatewayv2_route" "route_products" { // Create a route for the product listing
-#   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
-#   route_key = "GET /loadProducts"
-#   target    = "integrations/${aws_apigatewayv2_integration.load_products_integration.id}"
-# }
+resource "aws_apigatewayv2_integration" "get_user_data_integration" { // Create an integration for the kits listing
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.get_user_data.invoke_arn
+}
+resource "aws_apigatewayv2_route" "route_store_user_data" {
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "POST /storeUserData"
+  target    = "integrations/${aws_apigatewayv2_integration.store_user_data_integration.id}"
+}
 
-# resource "aws_lambda_permission" "products_api_gateway_permission" { // Create a permission for the kits listing
-#   statement_id  = "AllowExecutionFromAPIGateway"
-#   action        = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.list_products.function_name
-#   principal     = "apigateway.amazonaws.com"
-#   source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
-# }
+resource "aws_apigatewayv2_route" "route_get_user_data" { 
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "GET /getUserData"
+  target    = "integrations/${aws_apigatewayv2_integration.get_user_data_integration.id}"
+}
+
+resource "aws_lambda_permission" "store_user_data_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.store_user_data.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "get_user_data_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_user_data.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
 
 resource "aws_apigatewayv2_stage" "default_stage" { // Create a stage for the API Gateway
   api_id      = aws_apigatewayv2_api.api_gw_secdrive.id

@@ -54,3 +54,23 @@ resource "aws_iam_role" "iam_for_lambda" { // Create a role for the Lambda funct
   name               = "role_for_lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
 }
+
+resource "aws_lambda_function" "store_user_data" { // Create the Lambda function for storing user data
+  function_name = "store_user_data"
+  handler       = "store_user_data.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/store_user_data.zip"
+}
+
+resource "aws_lambda_function" "get_user_data" { // Create the Lambda function for getting user data
+  function_name = "get_user_data"
+  handler       = "get_user_data.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/get_user_data.zip"
+}

@@ -1,13 +1,12 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { auth, apiURL } from '@/config.js';
-  import { createUserWithEmailAndPassword } from 'firebase/auth';
+  import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
   import router from '@/router/index.js';
   import { onMounted } from 'vue';
-  import { useUserStore } from '@/stores/userStore.js';
+  import loginCheck from '@/logincheck';
   import { Button } from '@/components/ui/button'
 
-  const userStore = useUserStore();
   const firstName = ref('');
   const lastName = ref('');
   const email = ref('');
@@ -41,7 +40,8 @@
       alert('Successfully registered');
             
       storeUserData();
-      await userStore.fetchUserData(user.uid);
+
+      signOut(auth);
       router.push('/login');
 
     } catch (error: any) {
@@ -119,7 +119,7 @@
           placeholder="Confirm Password"
           class="w-full p-3 border border-gray-600 rounded-md bg-input text-gray-200"
         />
-        <Button type="button" @onclick="registerIn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Sign Up</Button>
+        <Button type="button" @click="registerIn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white">Sign Up</Button>
       </form>
       <p class="mt-4 text-center text-sm text-gray-300">
         Already have an account? <router-link to="/login" class="text-indigo-500 underline">Login</router-link>

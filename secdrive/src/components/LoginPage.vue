@@ -5,7 +5,10 @@
   import router from '@/router/index.js';
   import { onMounted } from 'vue';
   import { Button } from '@/components/ui/button'
+  import loginCheck from '@/logincheck';
+  import { useUserStore } from '@/stores/userStore.js'
 
+  const userStore = useUserStore();
   const email = ref('');
   const password = ref('');
 
@@ -29,7 +32,7 @@
             console.log('User id:', user.uid);
 
             alert('Successfully logged in');
-            
+            userStore.fetchUserData(user.uid);
             router.push('/dashboard');
         } catch (error: any) {
             if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/invalid-credential') {
@@ -41,6 +44,10 @@
             }
         }
     }
+
+    onMounted(() => {
+        loginCheck();
+    });
 </script>
 
 <template>
@@ -64,9 +71,6 @@
       </form>
       <p class="mt-4 text-center text-sm text-gray-300">
         Don't have an account? <router-link to="/signup" class="text-indigo-500 underline">Sign Up</router-link>
-      </p>
-      <p class="mt-4 text-center text-sm text-gray-300">
-        <router-link to="/dashboard" class="text-navy-500">Go to dashboard (dev)</router-link>
       </p>
     </div>
   </div>

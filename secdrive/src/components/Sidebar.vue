@@ -1,27 +1,59 @@
 <script setup lang="ts">
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  import { Button } from '@/components/ui/button'
+  import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from '@/components/ui/dropdown-menu'
 
-import { Separator } from '@/components/ui/separator'
-import { LogOut, Settings, Folder, Shield } from 'lucide-vue-next';
+  import { Separator } from '@/components/ui/separator'
+  import { LogOut, Settings, Folder, Shield, UserRound } from 'lucide-vue-next';
+  import router from '@/router/index.js'
+  import { auth } from '@/config'
+  import { ref, onMounted } from 'vue'
+  import { signOut } from 'firebase/auth'
+  import { useUserStore } from '@/stores/userStore.js'
 
-const user = {
-  initials: 'JD',
-  email: 'john.doe@example.com',
-  avatarUrl: 'https://github.com/radix-vue.png',
-};
+  const firstName = ref('');
+  const lastName = ref('');
+  const email = ref('');
 
-function handleLogout() {
-  console.log('Logging out...');
-}
+  const userStore = useUserStore();
+
+
+  async function logout() {
+    try {
+      await signOut(auth);
+      console.log('User logged out');
+      await userStore.clearUserData();
+      alert('Successfully logged out');
+      router.push('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  }
+
+  async function populateUserData() {
+    const user = auth.currentUser;
+    console.log('User:', user);
+    await userStore.fetchUserData(user.uid);
+    const data = userStore.getUserData;
+    console.log('User data:', data);
+    if (data.first_name) firstName.value = data.first_name;
+    if (data.last_name) lastName.value = data.last_name;
+    if (data.email) email.value = data.email;
+
+    console.log('First Name:', firstName.value);
+    console.log('Last Name:', lastName.value);
+    console.log('Email:', email.value);
+  }
+
+  onMounted(() => {
+    populateUserData();
+  });
 </script>
 
 <template>
@@ -54,23 +86,19 @@ function handleLogout() {
         <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                     <Button variant="outline" size="icon" class="overflow-hidden rounded-full">
-                        <Avatar class="h-8 w-8">
-                            <AvatarImage :src="user.avatarUrl" :alt="`@${user.initials}`" />
-                            <AvatarFallback>{{ user.initials }}</AvatarFallback>
-                        </Avatar>
+                        <UserRound class="h-8 w-8">
+                        </UserRound >
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="w-56">
                      <DropdownMenuLabel class="font-normal">
                         <div class="flex flex-col space-y-1">
-                            <p class="text-sm font-medium leading-none">{{ user.initials }}</p>
-                            <p class="text-xs leading-none text-muted-foreground">
-                            {{ user.email }}
-                            </p>
+                            <p class="text-sm font-medium leading-none">{{ firstName }} {{ lastName }}</p>
+                            <p class="text-xs leading-none text-muted-foreground">{{ email }}</p>
                         </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem @click="handleLogout">
+                    <DropdownMenuItem @click="logout">
                         <LogOut class="mr-2 h-4 w-4" />
                         <span>Log out</span>
                     </DropdownMenuItem>
