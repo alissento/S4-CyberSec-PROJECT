@@ -4,9 +4,12 @@ resource "aws_apigatewayv2_api" "api_gw_secdrive" { // Create an API Gateway
   protocol_type = "HTTP"                            // The protocol used by the API Gateway
 
   cors_configuration {
-    allow_origins = ["*"] // Allow the origin of the request
-    allow_methods = ["GET", "OPTIONS", "POST"]
-    allow_headers = ["*"]
+    allow_origins = ["http://localhost:5174", "http://localhost:5173", "https://nknez.tech", "*"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key", "X-Amz-Security-Token", "X-Amz-User-Agent"]
+    expose_headers = ["ETag"]
+    max_age = 86400
+    allow_credentials = false
   }
 
   depends_on = [aws_s3_bucket_website_configuration.website_s3b]
@@ -89,6 +92,18 @@ resource "aws_apigatewayv2_integration" "get_user_data_integration" { // Create 
   integration_type = "AWS_PROXY"
   integration_uri  = aws_lambda_function.get_user_data.invoke_arn
 }
+
+resource "aws_apigatewayv2_integration" "generate_presigned_url_integration" { // Create an integration for generating pre-signed URLs
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.generate_presigned_url.invoke_arn
+}
+
+resource "aws_apigatewayv2_integration" "confirm_upload_integration" { // Create an integration for confirming file upload
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.confirm_upload.invoke_arn
+}
 resource "aws_apigatewayv2_route" "route_store_user_data" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "POST /storeUserData"
@@ -99,6 +114,18 @@ resource "aws_apigatewayv2_route" "route_get_user_data" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "GET /getUserData"
   target    = "integrations/${aws_apigatewayv2_integration.get_user_data_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "route_generate_presigned_url" {
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "POST /generatePresignedUrl"
+  target    = "integrations/${aws_apigatewayv2_integration.generate_presigned_url_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "route_confirm_upload" {
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "POST /confirmUpload"
+  target    = "integrations/${aws_apigatewayv2_integration.confirm_upload_integration.id}"
 }
 
 resource "aws_lambda_permission" "store_user_data_api_gateway_permission" {
@@ -117,8 +144,29 @@ resource "aws_lambda_permission" "get_user_data_api_gateway_permission" {
   source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
 }
 
+resource "aws_lambda_permission" "generate_presigned_url_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.generate_presigned_url.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "confirm_upload_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.confirm_upload.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
+
 resource "aws_apigatewayv2_stage" "default_stage" { // Create a stage for the API Gateway
   api_id      = aws_apigatewayv2_api.api_gw_secdrive.id
   name        = "$default"
   auto_deploy = true
+
+  default_route_settings {
+    throttling_rate_limit  = 100
+    throttling_burst_limit = 200
+  }
 }

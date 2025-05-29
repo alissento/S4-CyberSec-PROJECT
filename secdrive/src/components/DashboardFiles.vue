@@ -17,33 +17,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
-// import { auth, apiURL } from '@/config';
+import { auth, api } from '@/config';
 import { FileText, Folder, Upload, Download, X, File, Image, FileVideo, FileAudio } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 
-const files = ref([
-  { id: 1, name: 'Project Proposal.docx', type: 'doc', size: '2.5 MB', modified: '2024-03-15 10:30 AM', isFolder: false, url: '/download/1' }, // Added dummy URL
-  { id: 2, name: 'Client Assets', type: 'folder', size: '1.2 GB', modified: '2024-03-14 09:00 AM', isFolder: true, url: null },
-  { id: 3, name: 'presentation_final_v3.pptx', type: 'ppt', size: '15.8 MB', modified: '2024-03-15 08:15 AM', isFolder: false, url: '/download/3' },
-  { id: 4, name: 'Website Mockups', type: 'folder', size: '350 MB', modified: '2024-03-12 14:20 PM', isFolder: true, url: null },
-  { id: 5, name: 'budget_report.xlsx', type: 'xls', size: '512 KB', modified: '2024-03-10 11:05 AM', isFolder: false, url: '/download/5' },
-  { id: 6, name: 'logo.svg', type: 'img', size: '8 KB', modified: '2024-02-28 16:45 PM', isFolder: false, url: '/download/6' },
-]);
-
-function getFileIcon(file: { isFolder: any; }) {
-  if (file.isFolder) {
-    return Folder;
-  }
-  return FileText;
+interface FileItem {
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  modified: string;
+  url?: string;
+  isFolder: boolean;
 }
 
 interface SelectedFile {
   file: File;
   id: string;
   preview?: string;
+}
+
+const files = ref<FileItem[]>([]);
+
+function getFileIcon(file: FileItem) {
+  if (file.isFolder) {
+    return Folder;
+  }
+  return FileText;
 }
 
 const isUploadDialogOpen = ref(false);
@@ -162,15 +164,16 @@ async function uploadSelectedFiles() {
   uploadProgress.value = 0;
   
   try {
-    // Simulate upload progress
     const totalFiles = selectedFiles.value.length;
+    const user = auth.currentUser;
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
     
     for (let i = 0; i < selectedFiles.value.length; i++) {
       const selectedFile = selectedFiles.value[i];
-      
-      // Template API call - replace with actual implementation
-      await simulateFileUpload(selectedFile.file);
-      
+      await uploadFileWithPresignedUrl(selectedFile.file, user.uid);
       uploadProgress.value = ((i + 1) / totalFiles) * 100;
     }
     
@@ -180,56 +183,102 @@ async function uploadSelectedFiles() {
     
     console.log('All files uploaded successfully');
     
+    // Refresh file list after upload
+    await loadUserFiles();
+    
   } catch (error) {
     console.error('Upload failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    alert(`Upload failed: ${errorMessage}`);
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;
   }
 }
 
-async function simulateFileUpload(file: File): Promise<void> {
-  // Template upload function - replace with actual API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      console.log(`Uploading file: ${file.name}, size: ${file.size} bytes`);
-      
-      // Here you would implement the actual upload logic:
-      // const user = auth.currentUser;
-      // const fullApiUrl = apiURL + '/uploadFile';
-      // 
-      // const formData = new FormData();
-      // formData.append('file', file);
-      // formData.append('user_id', user.uid);
-      // 
-      // await fetch(fullApiUrl, {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      
-      resolve();
-    }, 1000); // Simulate 1 second upload time per file
-  });
+async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<void> {
+  try {
+    // Step 1: Request pre-signed URL from backend
+    const response = await api.post('/generatePresignedUrl', {
+      user_id: userId,
+      file_name: file.name,
+      file_size: file.size,
+      content_type: file.type
+    });
+
+    const { presigned_url, file_id, s3_key } = response.data;
+
+    // Step 2: Upload file directly to S3 using pre-signed URL
+    await fetch(presigned_url, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type
+      }
+    });
+
+    // Step 3: Confirm upload and store metadata
+    await api.post('/confirmUpload', {
+      file_id,
+      user_id: userId,
+      file_name: file.name,
+      file_size: file.size,
+      s3_key,
+      content_type: file.type
+    });
+
+    console.log(`File ${file.name} uploaded successfully`);
+  } catch (error) {
+    console.error(`Failed to upload file ${file.name}:`, error);
+    throw error;
+  }
+}
+
+async function loadUserFiles(): Promise<void> {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const response = await api.get(`/getUserData?user_id=${user.uid}`);
+    files.value = response.data.files || [];
+  } catch (error) {
+    console.error('Failed to load user files:', error);
+  }
 }
 
 const totalSelectedSize = computed(() => {
   return selectedFiles.value.reduce((total, selected) => total + selected.file.size, 0);
 });
 
-function handleDownload(event: { preventDefault: () => void; }, file: { url: any; isFolder: any; name: any; }) {
+function handleDownload(event: Event, file: FileItem) {
   if (!file || !file.url || file.isFolder) return;
-
 
   event.preventDefault();
 
   console.log(`Initiating download for: ${file.name} from ${file.url}`);
+  
+  // Create a temporary anchor element to trigger download
+  const link = document.createElement('a');
+  link.href = file.url;
+  link.download = file.name;
+  link.target = '_blank';
+  
+  // Append to body, click, and remove
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
-function handleRowClick(file: { isFolder: any; name: any; }) {
-    if (file.isFolder) {
-        console.log(`Navigating into folder: ${file.name}`);
-    }
+function handleRowClick(file: FileItem) {
+  if (file.isFolder) {
+    console.log(`Navigating into folder: ${file.name}`);
+  }
 }
+
+// Load files when component is mounted
+onMounted(() => {
+  loadUserFiles();
+});
 
 </script>
 

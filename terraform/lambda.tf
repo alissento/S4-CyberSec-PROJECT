@@ -33,6 +33,15 @@ resource "aws_iam_policy" "lambda_policy" { // Create a policy for the Lambda fu
         ]
       },
       {
+        "Action" : [ // Allow the Lambda function to access S3 for pre-signed URLs
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ],
+        "Effect" : "Allow",
+        "Resource" : "${aws_s3_bucket.s3_user_data.arn}/*"
+      },
+      {
         "Action" : [ // Allow the Lambda function to write logs
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
@@ -73,4 +82,24 @@ resource "aws_lambda_function" "get_user_data" { // Create the Lambda function f
   timeout       = local.lambda_timeout
   role          = aws_iam_role.iam_for_lambda.arn
   filename      = "../backend/get_user_data.zip"
+}
+
+resource "aws_lambda_function" "generate_presigned_url" { // Create the Lambda function for generating pre-signed URLs
+  function_name = "generate_presigned_url"
+  handler       = "generate_presigned_url.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/generate_presigned_url.zip"
+}
+
+resource "aws_lambda_function" "confirm_upload" { // Create the Lambda function for confirming file upload
+  function_name = "confirm_upload"
+  handler       = "confirm_upload.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/confirm_upload.zip"
 }
