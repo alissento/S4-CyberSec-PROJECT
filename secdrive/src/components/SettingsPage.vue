@@ -1,52 +1,195 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { auth } from '@/config'
+import { onAuthStateChanged, updateEmail, updatePassword, type User } from 'firebase/auth'
+import { useUserStore } from '@/stores/userStore'
+import { toast } from 'vue-sonner'
 
-const fullName = ref('')
+const firstName = ref('')
+const lastName = ref('')
 const email = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
+const isLoading = ref(false)
+const isAuthReady = ref(false)
+const currentUser = ref<User | null>(null)
 
-function saveSettings() {
-  console.log('Saving settings', { fullName: fullName.value, email: email.value, newPassword: newPassword.value, confirmPassword: confirmPassword.value })
+const userStore = useUserStore()
+
+interface UserData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
 }
+
+async function loadUserData() {
+  if (!isAuthReady.value || !currentUser.value) {
+    console.log('Authentication not ready yet');
+    return;
+  }
+
+  try {
+    await userStore.fetchUserData(currentUser.value.uid);
+    const data = userStore.getUserData as unknown as UserData;
+    
+    if (data) {
+      firstName.value = data.first_name || '';
+      lastName.value = data.last_name || '';
+      email.value = data.email || '';
+    }
+  } catch (error) {
+    console.error('Failed to load user data:', error);
+    toast.error('Failed to load user data');
+  }
+}
+
+async function saveSettings() {
+  if (!currentUser.value) {
+    toast.error('User not authenticated');
+    return;
+  }
+
+  if (newPassword.value && newPassword.value !== confirmPassword.value) {
+    toast.error('Passwords do not match');
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    // Update profile data
+    const profileData: any = {};
+    if (firstName.value) profileData.first_name = firstName.value;
+    if (lastName.value) profileData.last_name = lastName.value;
+    if (email.value) profileData.email = email.value;
+
+    if (Object.keys(profileData).length > 0) {
+      await userStore.updateUserData(currentUser.value.uid, profileData);
+    }
+
+    // Update email in Firebase Auth if changed
+    if (email.value && email.value !== currentUser.value.email) {
+      await updateEmail(currentUser.value, email.value);
+    }
+
+    // Update password in Firebase Auth if provided
+    if (newPassword.value) {
+      await updatePassword(currentUser.value, newPassword.value);
+      newPassword.value = '';
+      confirmPassword.value = '';
+    }
+
+    toast.success('Settings updated successfully');
+  } catch (error) {
+    console.error('Failed to update settings:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update settings';
+    toast.error(errorMessage);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  onAuthStateChanged(auth, (user) => {
+    isAuthReady.value = true;
+    currentUser.value = user;
+    
+    if (user) {
+      console.log('User authenticated, loading user data');
+      loadUserData();
+    } else {
+      console.log('User not authenticated');
+    }
+  });
+});
 </script>
 
 <template>
   <div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-6 mt-6">
       <h1 class="text-3xl font-semibold text-white">Settings</h1>
     </div>
-    <Card>
+    
+    <Card class="max-w-2xl">
       <CardHeader>
-        <CardTitle>User Settings</CardTitle>
+        <CardTitle>Profile Settings</CardTitle>
       </CardHeader>
+      
       <form @submit.prevent="saveSettings">
-        <CardContent class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-muted-foreground">First Name</label>
-            <input v-model="fullName" type="text" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+        <CardContent class="space-y-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <Label for="firstName">First Name</Label>
+              <Input 
+                id="firstName"
+                v-model="firstName" 
+                type="text" 
+                placeholder="Enter your first name"
+                :disabled="isLoading"
+              />
+            </div>
+            <div class="space-y-2">
+              <Label for="lastName">Last Name</Label>
+              <Input 
+                id="lastName"
+                v-model="lastName" 
+                type="text" 
+                placeholder="Enter your last name"
+                :disabled="isLoading"
+              />
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-muted-foreground">Last Name</label>
-            <input v-model="fullName" type="text" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+          
+          <div class="space-y-2">
+            <Label for="email">Email Address</Label>
+            <Input 
+              id="email"
+              v-model="email" 
+              type="email" 
+              placeholder="Enter your email address"
+              :disabled="isLoading"
+            />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-muted-foreground">Email Address</label>
-            <input v-model="email" type="email" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-muted-foreground">New Password</label>
-            <input v-model="newPassword" type="password" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-muted-foreground">Confirm Password</label>
-            <input v-model="confirmPassword" type="password" class="mt-1 w-full p-2 rounded-md bg-input text-foreground" />
+          
+          <div class="border-t pt-6">
+            <h3 class="text-lg font-medium mb-4">Change Password</h3>
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <Label for="newPassword">New Password</Label>
+                <Input 
+                  id="newPassword"
+                  v-model="newPassword" 
+                  type="password" 
+                  placeholder="Enter new password (leave blank to keep current)"
+                  :disabled="isLoading"
+                />
+              </div>
+              <div class="space-y-2">
+                <Label for="confirmPassword">Confirm Password</Label>
+                <Input 
+                  id="confirmPassword"
+                  v-model="confirmPassword" 
+                  type="password" 
+                  placeholder="Confirm new password"
+                  :disabled="isLoading"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
-        <CardFooter class="mt-6 flex justify-center">
-          <Button type="submit" class="bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer">Save Changes</Button>
+        
+        <CardFooter class="flex justify-end">
+          <Button 
+            type="submit" 
+            :disabled="isLoading"
+            class="bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            {{ isLoading ? 'Saving...' : 'Save Changes' }}
+          </Button>
         </CardFooter>
       </form>
     </Card>

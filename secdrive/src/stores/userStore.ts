@@ -7,15 +7,28 @@ export const useUserStore = defineStore('user', {
     }),
     actions: {
         async fetchUserData(userId: any) {
-            if (this.userData) {
-                return;
-            }
-
             try {
-                const response = await api.get(`/getUserData?user_id=${userId}`);
+                const response = await api.get(`/getUserProfile?user_id=${userId}`);
                 this.userData = response.data;
+                console.log('Fetched user profile:', response.data);
             } catch (error) {
-                console.error(error);
+                console.error('Failed to fetch user profile:', error);
+                this.userData = null;
+            }
+        },
+        async updateUserData(userId: string, userData: any) {
+            try {
+                const response = await api.post('/storeUserData?operation=update', {
+                    user_id: userId,
+                    ...userData
+                });
+                
+                // Update local store after successful API call
+                await this.fetchUserData(userId);
+                return response.data;
+            } catch (error) {
+                console.error('Failed to update user data:', error);
+                throw error;
             }
         },
         async clearUserData() {

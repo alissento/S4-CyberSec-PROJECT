@@ -14,13 +14,14 @@
   import router from '@/router/index'
   import { auth } from '@/config'
   import { ref, onMounted } from 'vue'
-  import { signOut } from 'firebase/auth'
+  import { signOut, onAuthStateChanged } from 'firebase/auth'
   import { useUserStore } from '@/stores/userStore'
   import { toast } from 'vue-sonner'
 
   const firstName = ref('');
   const lastName = ref('');
   const email = ref('');
+  const isAuthReady = ref(false);
 
   const userStore = useUserStore();
 
@@ -44,11 +45,18 @@
   }
 
   async function populateUserData() {
-    const user = auth.currentUser;
-    if (!user) {
-      console.error('No user is currently logged in');
+    if (!isAuthReady.value) {
+      console.log('Authentication not ready yet, skipping user data load');
       return;
     }
+
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No authenticated user found');
+      return;
+    }
+
+    console.log('Loading user data for:', user.uid);
     await userStore.fetchUserData(user.uid);
     const data = userStore.getUserData as unknown as UserData;
     console.log('User data:', data);
@@ -64,7 +72,21 @@
   }
 
   onMounted(() => {
-    populateUserData();
+    // Wait for authentication state to be ready
+    onAuthStateChanged(auth, (user) => {
+      isAuthReady.value = true;
+      
+      if (user) {
+        console.log('User authenticated, loading user data');
+        populateUserData();
+      } else {
+        console.log('User not authenticated');
+        // Clear user data when not authenticated
+        firstName.value = '';
+        lastName.value = '';
+        email.value = '';
+      }
+    });
   });
 </script>
 

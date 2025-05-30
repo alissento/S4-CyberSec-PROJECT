@@ -103,3 +103,13 @@ resource "aws_lambda_function" "confirm_upload" { // Create the Lambda function 
   role          = aws_iam_role.iam_for_lambda.arn
   filename      = "../backend/confirm_upload.zip"
 }
+
+resource "aws_lambda_function" "get_user_profile" { // Create the Lambda function for getting user profile data
+  function_name = "get_user_profile"
+  handler       = "get_user_profile.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/get_user_profile.zip"
+}

@@ -19,9 +19,13 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import { auth, api } from '@/config';
-import { FileText, Folder, Upload, Download, X, File, Image, FileVideo, FileAudio } from 'lucide-vue-next';
+import { FileText, Folder, Upload, Download, X, File, Image, FileVideo, FileAudio, Trash2 } from 'lucide-vue-next';
 import { ref, computed, onMounted } from 'vue';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { useRouter } from 'vue-router';
+import { toast } from 'vue-sonner';
 
 interface FileItem {
   id: string;
@@ -40,12 +44,64 @@ interface SelectedFile {
 }
 
 const files = ref<FileItem[]>([]);
+const isAuthReady = ref(false);
+const currentUser = ref<User | null>(null);
+const isLoadingFiles = ref(false);
+const selectedFileIds = ref<Set<string>>(new Set());
+const isSelectAll = ref(false);
+
+const router = useRouter();
 
 function getFileIcon(file: FileItem) {
   if (file.isFolder) {
     return Folder;
   }
-  return FileText;
+  
+  // Use the same logic as getFileTypeIcon for consistency
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+    case 'svg':
+    case 'webp':
+      return Image;
+    case 'mp4':
+    case 'avi':
+    case 'mov':
+    case 'wmv':
+    case 'webm':
+      return FileVideo;
+    case 'mp3':
+    case 'wav':
+    case 'flac':
+    case 'aac':
+      return FileAudio;
+    case 'pdf':
+      return FileText;
+    case 'doc':
+    case 'docx':
+    case 'txt':
+    case 'rtf':
+      return FileText;
+    case 'xls':
+    case 'xlsx':
+    case 'csv':
+      return FileText;
+    case 'ppt':
+    case 'pptx':
+      return FileText;
+    case 'zip':
+    case 'rar':
+    case '7z':
+    case 'tar':
+    case 'gz':
+      return File;
+    default:
+      return File;
+  }
 }
 
 const isUploadDialogOpen = ref(false);
@@ -165,7 +221,7 @@ async function uploadSelectedFiles() {
   
   try {
     const totalFiles = selectedFiles.value.length;
-    const user = auth.currentUser;
+    const user = currentUser.value;
     
     if (!user) {
       throw new Error('User not authenticated');
@@ -182,6 +238,7 @@ async function uploadSelectedFiles() {
     isUploadDialogOpen.value = false;
     
     console.log('All files uploaded successfully');
+    toast.success(`Successfully uploaded ${totalFiles} file${totalFiles > 1 ? 's' : ''}`);
     
     // Refresh file list after upload
     await loadUserFiles();
@@ -189,7 +246,7 @@ async function uploadSelectedFiles() {
   } catch (error) {
     console.error('Upload failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    alert(`Upload failed: ${errorMessage}`);
+    toast.error(`Upload failed: ${errorMessage}`);
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;
@@ -236,13 +293,34 @@ async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<v
 
 async function loadUserFiles(): Promise<void> {
   try {
-    const user = auth.currentUser;
-    if (!user) return;
+    if (!isAuthReady.value) {
+      console.log('Authentication not ready yet, skipping file load');
+      return;
+    }
 
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('No authenticated user found');
+      return;
+    }
+
+    isLoadingFiles.value = true;
+    console.log('Loading files for user:', user.uid);
     const response = await api.get(`/getUserData?user_id=${user.uid}`);
     files.value = response.data.files || [];
+    
+    // Clear selections when files are reloaded
+    clearSelection();
+    
+    // Show success toast only if files were actually loaded (not on initial empty load)
+    if (files.value.length > 0) {
+      toast.success(`Loaded ${files.value.length} file${files.value.length > 1 ? 's' : ''}`);
+    }
   } catch (error) {
     console.error('Failed to load user files:', error);
+    toast.error('Failed to load files. Please try again.');
+  } finally {
+    isLoadingFiles.value = false;
   }
 }
 
@@ -275,9 +353,196 @@ function handleRowClick(file: FileItem) {
   }
 }
 
+async function deleteFile(file: FileItem) {
+  if (!file || file.isFolder) return;
+  
+  // Using toast instead of confirm for better UX
+  toast.warning(`Delete "${file.name}"?`, {
+    action: {
+      label: 'Delete',
+      onClick: async () => {
+        try {
+          const user = currentUser.value;
+          if (!user) {
+            throw new Error('User not authenticated');
+          }
+          
+          // Call delete API
+          await api.post('/deleteFile', {
+            file_id: file.id,
+            user_id: user.uid
+          });
+          
+          console.log(`File ${file.name} deleted successfully`);
+          toast.success(`File "${file.name}" deleted successfully`);
+          
+          // Remove from selection if it was selected
+          selectedFileIds.value.delete(file.id);
+          updateSelectAllState();
+          
+          // Refresh file list after deletion
+          await loadUserFiles();
+          
+        } catch (error) {
+          console.error('Delete failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+          toast.error(`Delete failed: ${errorMessage}`);
+        }
+      }
+    },
+    cancel: {
+      label: 'Cancel',
+      onClick: () => {}
+    }
+  });
+}
+
+// Multi-select functions
+function toggleFileSelection(fileId: string) {
+  if (selectedFileIds.value.has(fileId)) {
+    selectedFileIds.value.delete(fileId);
+  } else {
+    selectedFileIds.value.add(fileId);
+  }
+  updateSelectAllState();
+}
+
+function toggleSelectAll() {
+  const nonFolderFiles = files.value.filter(f => !f.isFolder);
+  
+  if (isSelectAll.value) {
+    // Deselect all
+    selectedFileIds.value.clear();
+    isSelectAll.value = false;
+  } else {
+    // Select all non-folder files
+    selectedFileIds.value.clear();
+    nonFolderFiles.forEach(file => selectedFileIds.value.add(file.id));
+    isSelectAll.value = true;
+  }
+}
+
+function updateSelectAllState() {
+  const nonFolderFiles = files.value.filter(f => !f.isFolder);
+  const selectedNonFolderFiles = nonFolderFiles.filter(f => selectedFileIds.value.has(f.id));
+  
+  isSelectAll.value = nonFolderFiles.length > 0 && selectedNonFolderFiles.length === nonFolderFiles.length;
+}
+
+function clearSelection() {
+  selectedFileIds.value.clear();
+  isSelectAll.value = false;
+}
+
+async function bulkDownload() {
+  const selectedFiles = files.value.filter(file => 
+    selectedFileIds.value.has(file.id) && !file.isFolder && file.url
+  );
+  
+  if (selectedFiles.length === 0) {
+    toast.warning('No downloadable files selected');
+    return;
+  }
+  
+  toast.info(`Downloading ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}...`);
+  
+  // Download each file sequentially with a small delay
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const file = selectedFiles[i];
+    console.log(`Downloading file ${i + 1}/${selectedFiles.length}: ${file.name}`);
+    
+    const link = document.createElement('a');
+    link.href = file.url!;
+    link.download = file.name;
+    link.target = '_blank';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Small delay between downloads to avoid overwhelming the browser
+    if (i < selectedFiles.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+  
+  toast.success(`Successfully downloaded ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`);
+  clearSelection();
+}
+
+async function bulkDelete() {
+  const selectedFiles = files.value.filter(file => 
+    selectedFileIds.value.has(file.id) && !file.isFolder
+  );
+  
+  if (selectedFiles.length === 0) {
+    toast.warning('No files selected for deletion');
+    return;
+  }
+  
+  const fileNames = selectedFiles.slice(0, 3).map(f => f.name).join(', ');
+  const displayNames = selectedFiles.length > 3 ? `${fileNames}... and ${selectedFiles.length - 3} more` : fileNames;
+  
+  toast.warning(`Delete ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}?`, {
+    description: `${displayNames}`,
+    action: {
+      label: 'Delete All',
+      onClick: async () => {
+        try {
+          const user = currentUser.value;
+          if (!user) {
+            throw new Error('User not authenticated');
+          }
+          
+          toast.info(`Deleting ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}...`);
+          
+          // Delete files sequentially
+          for (const file of selectedFiles) {
+            await api.post('/deleteFile', {
+              file_id: file.id,
+              user_id: user.uid
+            });
+            console.log(`File ${file.name} deleted successfully`);
+          }
+          
+          clearSelection();
+          
+          // Refresh file list after deletion
+          await loadUserFiles();
+          
+          toast.success(`Successfully deleted ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`);
+          
+        } catch (error) {
+          console.error('Bulk delete failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+          toast.error(`Bulk delete failed: ${errorMessage}`);
+        }
+      }
+    },
+    cancel: {
+      label: 'Cancel',
+      onClick: () => {}
+    }
+  });
+}
+
+const selectedFilesCount = computed(() => selectedFileIds.value.size);
+
 // Load files when component is mounted
 onMounted(() => {
-  loadUserFiles();
+  // Wait for authentication state to be ready
+  onAuthStateChanged(auth, (user) => {
+    isAuthReady.value = true;
+    currentUser.value = user;
+    
+    if (user) {
+      console.log('User authenticated, loading files');
+      loadUserFiles();
+    } else {
+      console.log('User not authenticated, redirecting to login');
+      router.push('/login');
+    }
+  });
 });
 
 </script>
@@ -285,8 +550,47 @@ onMounted(() => {
 <template>
   <div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6 mt-6">
-      <h1 class="text-3xl font-semibold text-white">Your Files</h1>
-      
+      <div class="flex items-center space-x-3">
+        <h1 class="text-3xl font-semibold text-white">Your Files</h1>
+        <div v-if="isLoadingFiles" class="flex items-center space-x-2">
+          <div class="flex space-x-1">
+            <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+            <div class="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+            <div class="w-2 h-2 bg-indigo-300 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+          </div>
+          <span class="text-sm text-indigo-300 animate-pulse">Loading files...</span>
+        </div>
+        <div v-if="selectedFilesCount > 0" class="flex items-center space-x-2 bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20">
+          <span class="text-sm font-medium text-indigo-300">{{ selectedFilesCount }} file{{ selectedFilesCount > 1 ? 's' : '' }} selected</span>
+          <Button
+            @click="bulkDownload"
+            size="sm"
+            variant="outline"
+            class="text-indigo-400 border-indigo-400 hover:bg-indigo-400 hover:text-white"
+          >
+            <Download class="mr-1 h-3 w-3" />
+            Download All
+          </Button>
+          <Button
+            @click="bulkDelete"
+            size="sm"
+            variant="outline"
+            class="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
+          >
+            <Trash2 class="mr-1 h-3 w-3" />
+            Delete All
+          </Button>
+          <Button
+            @click="clearSelection"
+            size="sm"
+            variant="ghost"
+            class="text-gray-400 hover:text-white"
+          >
+            <X class="mr-1 h-3 w-3" />
+            Clear
+          </Button>
+        </div>
+      </div>
       <Dialog v-model:open="isUploadDialogOpen">
         <DialogTrigger as-child>
           <Button @click="uploadFile" class="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer">
@@ -426,72 +730,152 @@ onMounted(() => {
       <Table>
         <TableHeader>
           <TableRow>
-             <TableHead class="w-[50px]"><input type="checkbox" class="h-4 w-4 text-indigo-500" /></TableHead>
+             <TableHead class="w-[50px]">
+               <input 
+                 type="checkbox" 
+                 class="h-4 w-4 text-indigo-500 rounded border-gray-300 focus:ring-indigo-500 focus:ring-2"
+                 :checked="isSelectAll"
+                 @change="toggleSelectAll"
+               />
+             </TableHead>
              <TableHead class="min-w-[250px] w-[40%] lg:w-[50%] text-gray-400">Name</TableHead>
              <TableHead class="min-w-[80px] text-gray-400">Type</TableHead>
              <TableHead class="min-w-[100px] text-gray-400">Size</TableHead>
-             <TableHead class="min-w-[150px] text-right text-gray-400">Last Modified</TableHead>
-             <TableHead class="w-[100px] text-center text-gray-400">Actions</TableHead>
+             <TableHead class="w-[120px] text-center text-gray-400">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow
-             v-for="file in files"
-             :key="file.id"
-             class="hover:bg-muted/50"
-             :class="{'cursor-pointer': file.isFolder}"
-             @click="handleRowClick(file)"
-          >
-             <TableCell>
-                <input type="checkbox" :id="`select-${file.id}`" class="h-4 w-4 text-indigo-500" />
-             </TableCell>
+          <!-- Loading Skeleton -->
+          <template v-if="isLoadingFiles">
+            <TableRow v-for="i in 5" :key="`skeleton-${i}`" class="hover:bg-muted/50">
+              <TableCell>
+                <Skeleton class="h-4 w-4 rounded" />
+              </TableCell>
+              <TableCell class="font-medium">
+                <div class="flex items-center space-x-2">
+                  <Skeleton class="h-4 w-4 rounded" />
+                  <Skeleton class="h-4 w-32 rounded" />
+                </div>
+              </TableCell>
+              <TableCell>
+                <Skeleton class="h-4 w-16 rounded" />
+              </TableCell>
+              <TableCell>
+                <Skeleton class="h-4 w-12 rounded" />
+              </TableCell>
+              <TableCell class="text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <Skeleton class="h-8 w-8 rounded" />
+                  <Skeleton class="h-8 w-8 rounded" />
+                </div>
+              </TableCell>
+            </TableRow>
+          </template>
 
-            <TableCell class="font-medium">
-              <div class="flex items-center space-x-2">
-                 <component :is="getFileIcon(file)" class="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                 <span
-                    v-if="file.isFolder"
-                    class="truncate"
-                    :title="file.name"
-                 >
-                    {{ file.name }}
-                 </span>
-                 <a
-                    v-else
-                    href="#"
-                    @click.stop="handleDownload($event, file)"
-                    class="hover:underline truncate cursor-pointer"
-                    :title="`Download ${file.name}`"
-                 >
-                     {{ file.name }}
-                 </a>
-              </div>
-            </TableCell>
+          <!-- Actual File Rows -->
+          <template v-else>
+            <TableRow
+               v-for="file in files"
+               :key="file.id"
+               class="hover:bg-muted/50 transition-all duration-200 ease-in-out"
+               :class="{
+                 'cursor-pointer': file.isFolder,
+                 'bg-indigo-50/50 dark:bg-indigo-950/20 border-l-4 border-indigo-500 shadow-sm': selectedFileIds.has(file.id) && !file.isFolder
+               }"
+               @click="file.isFolder ? handleRowClick(file) : null"
+            >
+               <TableCell @click.stop>
+                  <input 
+                    v-if="!file.isFolder"
+                    type="checkbox" 
+                    :id="`select-${file.id}`" 
+                    class="h-4 w-4 text-indigo-500 rounded border-gray-300 focus:ring-indigo-500 focus:ring-2"
+                    :checked="selectedFileIds.has(file.id)"
+                    @change="toggleFileSelection(file.id)"
+                  />
+                  <div v-else class="w-4 h-4"></div>
+               </TableCell>
 
-            <TableCell class="capitalize text-muted-foreground">{{ file.isFolder ? 'Folder' : file.type }}</TableCell>
-            <TableCell class="text-muted-foreground">{{ file.size }}</TableCell>
-            <TableCell class="text-right text-muted-foreground whitespace-nowrap">{{ file.modified }}</TableCell>
+              <TableCell class="font-medium">
+                <div class="flex items-center space-x-2">
+                   <component :is="getFileIcon(file)" class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                   <span
+                      v-if="file.isFolder"
+                      class="truncate"
+                      :title="file.name"
+                   >
+                      {{ file.name }}
+                   </span>
+                   <a
+                      v-else
+                      href="#"
+                      @click.stop="handleDownload($event, file)"
+                      class="hover:underline truncate cursor-pointer"
+                      :title="`Download ${file.name}`"
+                   >
+                       {{ file.name }}
+                   </a>
+                </div>
+              </TableCell>
 
-             <TableCell class="text-center">
-                <Button
-                   v-if="!file.isFolder"
-                   variant="ghost"
-                   size="icon"
-                   @click.stop="handleDownload($event, file)"
-                   title="Download"
-                   class="h-8 w-8"
-                >
-                   <Download class="h-4 w-4" />
-                </Button>
-                 <Button v-else variant="ghost" size="icon" class="h-8 w-8 invisible"> Placeholder </Button>
-             </TableCell>
-          </TableRow>
+              <TableCell class="capitalize text-muted-foreground">{{ file.isFolder ? 'Folder' : file.type }}</TableCell>
+              <TableCell class="text-muted-foreground">{{ file.size }}</TableCell>
 
-          <TableRow v-if="files.length === 0">
-             <TableCell colspan="6" class="text-center text-muted-foreground py-8 h-48">
-                No files found. Upload your first file!
-             </TableCell>
-          </TableRow>
+               <TableCell class="text-center">
+                  <div class="flex items-center justify-center gap-1">
+                    <Button
+                       v-if="!file.isFolder"
+                       variant="ghost"
+                       size="icon"
+                       @click.stop="handleDownload($event, file)"
+                       title="Download"
+                       class="h-8 w-8 text-muted-foreground hover:text-indigo-500"
+                    >
+                       <Download class="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                       v-if="!file.isFolder"
+                       variant="ghost"
+                       size="icon"
+                       @click.stop="deleteFile(file)"
+                       title="Delete"
+                       class="h-8 w-8 text-muted-foreground hover:text-red-500"
+                    >
+                       <Trash2 class="h-4 w-4" />
+                    </Button>
+                    
+                    <div v-if="file.isFolder" class="h-8 w-16 flex items-center justify-center">
+                      <span class="text-xs text-muted-foreground">—</span>
+                    </div>
+                  </div>
+               </TableCell>
+            </TableRow>
+
+            <TableRow v-if="!isLoadingFiles && files.length === 0">
+               <TableCell colspan="5" class="text-center text-muted-foreground py-8 h-48">
+                  <div class="flex flex-col items-center justify-center space-y-3">
+                    <div class="relative">
+                      <Folder class="h-16 w-16 text-muted-foreground/30" />
+                      <div class="absolute -top-1 -right-1 w-6 h-6 bg-indigo-500/20 rounded-full flex items-center justify-center">
+                        <Upload class="h-3 w-3 text-indigo-400" />
+                      </div>
+                    </div>
+                    <div class="space-y-1">
+                      <p class="text-lg font-medium text-muted-foreground">No files found</p>
+                      <p class="text-sm text-muted-foreground/70">Upload your first file to get started!</p>
+                    </div>
+                    <Button 
+                      @click="uploadFile" 
+                      class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                      size="sm"
+                    >
+                      <Upload class="mr-2 h-4 w-4" /> Upload File
+                    </Button>
+                  </div>
+               </TableCell>
+            </TableRow>
+          </template>
         </TableBody>
       </Table>
     </div>
