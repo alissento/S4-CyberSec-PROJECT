@@ -84,10 +84,37 @@ async function saveSettings() {
     }
 
     toast.success('Settings updated successfully');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to update settings:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update settings';
-    toast.error(errorMessage);
+    
+    if (error.code === 'auth/too-many-requests') {
+      toast.error('Too many update attempts. Please try again later.', {
+        style: { backgroundColor: 'red' },
+        duration: 6000
+      });
+    } else if (error.code === 'auth/requires-recent-login') {
+      toast.error('Please log out and log back in before updating sensitive information.', {
+        style: { backgroundColor: 'red' },
+        duration: 6000
+      });
+    } else if (error.code === 'auth/invalid-email') {
+      toast.error('Invalid email address format.', {
+        style: { backgroundColor: 'red' }
+      });
+    } else if (error.code === 'auth/email-already-in-use') {
+      toast.error('This email address is already in use by another account.', {
+        style: { backgroundColor: 'red' },
+        duration: 5000
+      });
+    } else if (error.code === 'auth/weak-password') {
+      toast.error('Password is too weak. Please choose a stronger password.', {
+        style: { backgroundColor: 'red' },
+        duration: 5000
+      });
+    } else {
+      const errorMessage = error.message || 'Failed to update settings';
+      toast.error(errorMessage);
+    }
   } finally {
     isLoading.value = false;
   }

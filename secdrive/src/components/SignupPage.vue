@@ -49,6 +49,21 @@
       if (error.code === 'auth/email-already-in-use') {
         console.error('Error:', error);
         toast.error('Email already in use', { style: { backgroundColor: 'red' } });
+      } else if (error.code === 'auth/too-many-requests') {
+        console.error('Error:', error);
+        toast.error('Too many registration attempts. Please try again later.', { 
+          style: { backgroundColor: 'red' },
+          duration: 6000 
+        });
+      } else if (error.code === 'auth/password-does-not-meet-requirements') {
+        console.error('Error:', error);
+        toast.error('Password does not meet requirements. Please choose a stronger password.', { 
+          style: { backgroundColor: 'red' },
+          duration: 5000 
+        });
+      } else if (error.code === 'auth/invalid-email') {
+        console.error('Error:', error);
+        toast.error('Invalid email address format.', { style: { backgroundColor: 'red' } });
       } else {
         console.error('Error:', error);
         toast.error('An error occurred while registering', { style: { backgroundColor: 'red' } });

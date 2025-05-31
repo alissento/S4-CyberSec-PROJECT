@@ -25,7 +25,7 @@ resource "aws_s3_bucket_website_configuration" "website_s3b" { // Defining the w
   }
 
   error_document {
-    key = "error.html"
+    key = "index.html"
   }
 }
 resource "aws_s3_bucket_policy" "bucket_policy_for_website" { // Setting the bucket policy

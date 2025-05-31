@@ -38,9 +38,21 @@
             if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/invalid-credential') {
               console.error('Error:', error);  
               toast.error('Invalid login credentials', { style: { backgroundColor: 'red' } });
+            } else if (error.code === 'auth/too-many-requests') {
+              console.error('Error:', error);
+              toast.error('Too many failed login attempts. Please try again later or reset your password.', { 
+                style: { backgroundColor: 'red' },
+                duration: 6000 
+              });
+            } else if (error.code === 'auth/user-disabled') {
+              console.error('Error:', error);
+              toast.error('This account has been disabled. Please contact support.', { 
+                style: { backgroundColor: 'red' },
+                duration: 6000 
+              });
             } else {
-                console.error('Error:', error);
-                toast.error('An error occurred while logging in', { style: { backgroundColor: 'red' } });
+              console.error('Error:', error);
+              toast.error('An error occurred while logging in', { style: { backgroundColor: 'red' } });
             }
         }
     }

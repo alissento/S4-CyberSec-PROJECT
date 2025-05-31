@@ -18,7 +18,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { auth, api } from '@/config';
 import { FileText, Folder, Upload, Download, X, File, Image, FileVideo, FileAudio, Trash2 } from 'lucide-vue-next';
@@ -112,6 +111,8 @@ const isUploadDialogOpen = ref(false);
 const selectedFiles = ref<SelectedFile[]>([]);
 const isUploading = ref(false);
 const uploadProgress = ref(0);
+const currentUploadFile = ref<string>('');
+const currentUploadStep = ref<string>('');
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isDragOver = ref(false);
 
@@ -222,6 +223,8 @@ async function uploadSelectedFiles() {
   
   isUploading.value = true;
   uploadProgress.value = 0;
+  currentUploadFile.value = '';
+  currentUploadStep.value = '';
   
   try {
     const totalFiles = selectedFiles.value.length;
@@ -231,15 +234,26 @@ async function uploadSelectedFiles() {
       throw new Error('User not authenticated');
     }
     
+    // Calculate steps per file: encrypt (25%) + get presigned URL (25%) + upload (40%) + confirm (10%)
+    const stepsPerFile = 4;
+    const totalSteps = totalFiles * stepsPerFile;
+    let currentStep = 0;
+    
+    const updateProgress = () => {
+      uploadProgress.value = (currentStep / totalSteps) * 100;
+    };
+    
     for (let i = 0; i < selectedFiles.value.length; i++) {
       const selectedFile = selectedFiles.value[i];
-      await uploadFileWithPresignedUrl(selectedFile.file, user.uid);
-      uploadProgress.value = ((i + 1) / totalFiles) * 100;
+      currentUploadFile.value = selectedFile.file.name;
+      await uploadFileWithPresignedUrl(selectedFile.file, user.uid, updateProgress, () => currentStep++);
     }
     
     // Clear selected files and close dialog
     selectedFiles.value = [];
     isUploadDialogOpen.value = false;
+    currentUploadFile.value = '';
+    currentUploadStep.value = '';
     
     console.log('All files uploaded successfully');
     toast.success(`Successfully uploaded ${totalFiles} file${totalFiles > 1 ? 's' : ''}`);
@@ -254,20 +268,31 @@ async function uploadSelectedFiles() {
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;
+    currentUploadFile.value = '';
+    currentUploadStep.value = '';
   }
 }
 
-async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<void> {
+async function uploadFileWithPresignedUrl(file: File, userId: string, updateProgress: () => void, incrementStep: () => void): Promise<void> {
   try {
-    // Step 1: Get encryption key for this user
+    // Step 1: Get encryption key for this user (25% of file progress)
+    currentUploadStep.value = 'Getting encryption key...';
     const { cryptoKey, encryptedKey } = await getCryptoKey(userId);
+    incrementStep();
+    updateProgress();
+    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
     
-    // Step 2: Encrypt the file
+    // Step 2: Encrypt the file (25% of file progress)
+    currentUploadStep.value = 'Encrypting file...';
     toast.info(`Encrypting ${file.name}...`);
     const encryptionResult = await encryptFile(file, cryptoKey);
     const encryptedBlob = createEncryptedBlob(encryptionResult.encryptedData, encryptionResult.iv);
+    incrementStep();
+    updateProgress();
+    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
     
-    // Step 3: Request pre-signed URL from backend (for encrypted file)
+    // Step 3: Request pre-signed URL from backend (25% of file progress)
+    currentUploadStep.value = 'Requesting upload URL...';
     const response = await api.post('/generatePresignedUrl', {
       user_id: userId,
       file_name: file.name,
@@ -276,8 +301,12 @@ async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<v
     });
 
     const { presigned_url, file_id, s3_key } = response.data;
+    incrementStep();
+    updateProgress();
+    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
 
-    // Step 4: Upload encrypted file directly to S3 using pre-signed URL
+    // Step 4: Upload encrypted file directly to S3 using pre-signed URL (25% of file progress)
+    currentUploadStep.value = 'Uploading to cloud...';
     toast.info(`Uploading encrypted ${file.name}...`);
     await fetch(presigned_url, {
       method: 'PUT',
@@ -288,6 +317,7 @@ async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<v
     });
 
     // Step 5: Confirm upload and store metadata with encryption info
+    currentUploadStep.value = 'Finalizing upload...';
     await api.post('/confirmUpload', {
       file_id,
       user_id: userId,
@@ -297,6 +327,10 @@ async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<v
       content_type: file.type, // Store original content type
       encrypted_key: encryptedKey // Store encrypted data key
     });
+    
+    incrementStep();
+    updateProgress();
+    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
 
     console.log(`File ${file.name} uploaded and encrypted successfully`);
   } catch (error) {
@@ -333,10 +367,6 @@ async function loadUserFiles(): Promise<void> {
     // Clear selections when files are reloaded
     clearSelection();
     
-    // Show success toast only if files were actually loaded (not on initial empty load)
-    if (files.value.length > 0) {
-      toast.success(`Loaded ${files.value.length} file${files.value.length > 1 ? 's' : ''}`);
-    }
   } catch (error) {
     console.error('Failed to load user files:', error);
     toast.error('Failed to load files. Please try again.');
@@ -707,7 +737,7 @@ onMounted(() => {
                 {{ isDragOver ? 'Drop files here' : 'Drop files here or click to browse' }}
               </p>
               <p class="text-sm text-muted-foreground mb-4">You can select multiple files at once</p>
-              <Button type="button" @click.stop="openFileDialog" variant="outline">
+              <Button type="button" @click.stop="openFileDialog" variant="outline" class="cursor-pointer">
                 Choose Files
               </Button>
             </div>
@@ -766,12 +796,33 @@ onMounted(() => {
             </div>
             
             <!-- Upload Progress -->
-            <div v-if="isUploading" class="space-y-2">
+            <div v-if="isUploading" class="space-y-3">
               <div class="flex items-center justify-between">
                 <Label class="text-sm">Uploading files...</Label>
                 <span class="text-sm text-muted-foreground">{{ Math.round(uploadProgress) }}%</span>
               </div>
-              <Progress :value="uploadProgress" class="w-full" />
+              
+              <!-- Custom Progress Bar -->
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div 
+                  class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-300 ease-out"
+                  :style="`width: ${uploadProgress}%`"
+                >
+                  <div class="h-full bg-white/20 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+              
+              <!-- Current file and step details -->
+              <div v-if="currentUploadFile" class="space-y-1">
+                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                  <span class="truncate" :title="currentUploadFile">
+                    Current: {{ currentUploadFile }}
+                  </span>
+                </div>
+                <div v-if="currentUploadStep" class="text-xs text-indigo-400 font-medium">
+                  {{ currentUploadStep }}
+                </div>
+              </div>
             </div>
           </div>
           
@@ -779,6 +830,7 @@ onMounted(() => {
             <Button
               type="button"
               variant="outline"
+              class="cursor-pointer"
               @click="isUploadDialogOpen = false"
               :disabled="isUploading"
             >
@@ -788,7 +840,7 @@ onMounted(() => {
               type="button"
               @click="uploadSelectedFiles"
               :disabled="selectedFiles.length === 0 || isUploading"
-              class="bg-indigo-600 hover:bg-indigo-700"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
             >
               <Upload class="mr-2 h-4 w-4" />
               {{ isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}` }}
