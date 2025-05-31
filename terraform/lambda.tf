@@ -145,3 +145,13 @@ resource "aws_lambda_function" "decrypt_data_key" { // Create the Lambda functio
   role          = aws_iam_role.iam_for_lambda.arn
   filename      = "../backend/decrypt_data_key.zip"
 }
+
+resource "aws_lambda_function" "delete_file" { // Create the Lambda function for deleting files
+  function_name = "delete_file"
+  handler       = "delete_file.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/delete_file.zip"
+}

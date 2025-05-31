@@ -122,6 +122,13 @@ resource "aws_apigatewayv2_integration" "decrypt_data_key_integration" { // Crea
   integration_type = "AWS_PROXY"
   integration_uri  = aws_lambda_function.decrypt_data_key.invoke_arn
 }
+
+resource "aws_apigatewayv2_integration" "delete_file_integration" { // Create an integration for deleting files
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.delete_file.invoke_arn
+}
+
 resource "aws_apigatewayv2_route" "route_store_user_data" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "POST /storeUserData"
@@ -162,6 +169,12 @@ resource "aws_apigatewayv2_route" "route_decrypt_data_key" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "POST /decryptDataKey"
   target    = "integrations/${aws_apigatewayv2_integration.decrypt_data_key_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "route_delete_file" {
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "POST /deleteFile"
+  target    = "integrations/${aws_apigatewayv2_integration.delete_file_integration.id}"
 }
 
 resource "aws_lambda_permission" "store_user_data_api_gateway_permission" {
@@ -216,6 +229,14 @@ resource "aws_lambda_permission" "decrypt_data_key_api_gateway_permission" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.decrypt_data_key.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "delete_file_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.delete_file.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
 }
