@@ -26,6 +26,8 @@ import { ref, computed, onMounted } from 'vue';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
+import { encryptFile, createEncryptedBlob, downloadAndDecryptFile } from '@/utils/encryption';
+import { getCryptoKey, getCryptoKeyForDecryption } from '@/utils/encryptionService';
 
 interface FileItem {
   id: string;
@@ -35,6 +37,8 @@ interface FileItem {
   modified: string;
   url?: string;
   isFolder: boolean;
+  isEncrypted?: boolean;
+  encryptedKey?: string;
 }
 
 interface SelectedFile {
@@ -255,36 +259,46 @@ async function uploadSelectedFiles() {
 
 async function uploadFileWithPresignedUrl(file: File, userId: string): Promise<void> {
   try {
-    // Step 1: Request pre-signed URL from backend
+    // Step 1: Get encryption key for this user
+    const { cryptoKey, encryptedKey } = await getCryptoKey(userId);
+    
+    // Step 2: Encrypt the file
+    toast.info(`Encrypting ${file.name}...`);
+    const encryptionResult = await encryptFile(file, cryptoKey);
+    const encryptedBlob = createEncryptedBlob(encryptionResult.encryptedData, encryptionResult.iv);
+    
+    // Step 3: Request pre-signed URL from backend (for encrypted file)
     const response = await api.post('/generatePresignedUrl', {
       user_id: userId,
       file_name: file.name,
-      file_size: file.size,
-      content_type: file.type
+      file_size: encryptedBlob.size, // Use encrypted file size
+      content_type: 'application/octet-stream' // Encrypted files are binary
     });
 
     const { presigned_url, file_id, s3_key } = response.data;
 
-    // Step 2: Upload file directly to S3 using pre-signed URL
+    // Step 4: Upload encrypted file directly to S3 using pre-signed URL
+    toast.info(`Uploading encrypted ${file.name}...`);
     await fetch(presigned_url, {
       method: 'PUT',
-      body: file,
+      body: encryptedBlob,
       headers: {
-        'Content-Type': file.type
+        'Content-Type': 'application/octet-stream'
       }
     });
 
-    // Step 3: Confirm upload and store metadata
+    // Step 5: Confirm upload and store metadata with encryption info
     await api.post('/confirmUpload', {
       file_id,
       user_id: userId,
       file_name: file.name,
-      file_size: file.size,
+      file_size: file.size, // Store original file size for display
       s3_key,
-      content_type: file.type
+      content_type: file.type, // Store original content type
+      encrypted_key: encryptedKey // Store encrypted data key
     });
 
-    console.log(`File ${file.name} uploaded successfully`);
+    console.log(`File ${file.name} uploaded and encrypted successfully`);
   } catch (error) {
     console.error(`Failed to upload file ${file.name}:`, error);
     throw error;
@@ -309,6 +323,13 @@ async function loadUserFiles(): Promise<void> {
     const response = await api.get(`/getUserData?user_id=${user.uid}`);
     files.value = response.data.files || [];
     
+    // Debug: Log file encryption status
+    console.log('Loaded files with encryption status:', files.value.map(f => ({
+      name: f.name,
+      isEncrypted: f.isEncrypted,
+      hasEncryptedKey: !!f.encryptedKey
+    })));
+    
     // Clear selections when files are reloaded
     clearSelection();
     
@@ -328,23 +349,56 @@ const totalSelectedSize = computed(() => {
   return selectedFiles.value.reduce((total, selected) => total + selected.file.size, 0);
 });
 
-function handleDownload(event: Event, file: FileItem) {
+async function handleDownload(event: Event, file: FileItem) {
   if (!file || !file.url || file.isFolder) return;
 
   event.preventDefault();
 
-  console.log(`Initiating download for: ${file.name} from ${file.url}`);
-  
-  // Create a temporary anchor element to trigger download
-  const link = document.createElement('a');
-  link.href = file.url;
-  link.download = file.name;
-  link.target = '_blank';
-  
-  // Append to body, click, and remove
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  try {
+    console.log('Download request for file:', {
+      name: file.name,
+      isEncrypted: file.isEncrypted,
+      hasEncryptedKey: !!file.encryptedKey,
+      url: file.url
+    });
+
+    if (file.isEncrypted && file.encryptedKey) {
+      // Handle encrypted file download
+      console.log(`Downloading and decrypting encrypted file: ${file.name}`);
+      
+      const user = currentUser.value;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      toast.info(`Downloading and decrypting ${file.name}...`);
+      
+      // Get decryption key
+      const decryptionKey = await getCryptoKeyForDecryption(user.uid, file.encryptedKey);
+      console.log('Decryption key obtained successfully');
+      
+      // Download and decrypt the file
+      await downloadAndDecryptFile(file.url, file.name, decryptionKey);
+      
+      toast.success(`Successfully downloaded and decrypted ${file.name}`);
+    } else {
+      // Handle unencrypted file download (legacy files)
+      console.log(`Downloading unencrypted file: ${file.name} from ${file.url}`);
+      
+      const link = document.createElement('a');
+      link.href = file.url;
+      link.download = file.name;
+      link.target = '_blank';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch (error) {
+    console.error('Download failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    toast.error(`Download failed: ${errorMessage}`);
+  }
 }
 
 function handleRowClick(file: FileItem) {
@@ -443,7 +497,13 @@ async function bulkDownload() {
     toast.warning('No downloadable files selected');
     return;
   }
-  
+
+  const user = currentUser.value;
+  if (!user) {
+    toast.error('User not authenticated');
+    return;
+  }
+
   toast.info(`Downloading ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}...`);
   
   // Download each file sequentially with a small delay
@@ -451,14 +511,26 @@ async function bulkDownload() {
     const file = selectedFiles[i];
     console.log(`Downloading file ${i + 1}/${selectedFiles.length}: ${file.name}`);
     
-    const link = document.createElement('a');
-    link.href = file.url!;
-    link.download = file.name;
-    link.target = '_blank';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      if (file.isEncrypted && file.encryptedKey) {
+        // Handle encrypted file
+        const decryptionKey = await getCryptoKeyForDecryption(user.uid, file.encryptedKey);
+        await downloadAndDecryptFile(file.url!, file.name, decryptionKey);
+      } else {
+        // Handle unencrypted file (legacy)
+        const link = document.createElement('a');
+        link.href = file.url!;
+        link.download = file.name;
+        link.target = '_blank';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error(`Failed to download ${file.name}:`, error);
+      toast.error(`Failed to download ${file.name}`);
+    }
     
     // Small delay between downloads to avoid overwhelming the browser
     if (i < selectedFiles.length - 1) {

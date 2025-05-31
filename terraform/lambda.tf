@@ -49,6 +49,18 @@ resource "aws_iam_policy" "lambda_policy" { // Create a policy for the Lambda fu
         ],
         "Effect" : "Allow",
         "Resource" : "arn:aws:logs:*:*:*"
+      },
+      {
+        "Action" : [ // Allow the Lambda function to use KMS for encryption/decryption
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:CreateGrant",
+          "kms:DescribeKey"
+        ],
+        "Effect" : "Allow",
+        "Resource" : aws_kms_key.secdrive_encryption_key.arn
       }
     ]
   })
@@ -112,4 +124,24 @@ resource "aws_lambda_function" "get_user_profile" { // Create the Lambda functio
   timeout       = local.lambda_timeout
   role          = aws_iam_role.iam_for_lambda.arn
   filename      = "../backend/get_user_profile.zip"
+}
+
+resource "aws_lambda_function" "generate_data_key" { // Create the Lambda function for generating data keys
+  function_name = "generate_data_key"
+  handler       = "generate_data_key.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/generate_data_key.zip"
+}
+
+resource "aws_lambda_function" "decrypt_data_key" { // Create the Lambda function for decrypting data keys
+  function_name = "decrypt_data_key"
+  handler       = "decrypt_data_key.lambda_handler"
+  runtime       = local.lambda_runtime
+  memory_size   = local.lambda_memory_size
+  timeout       = local.lambda_timeout
+  role          = aws_iam_role.iam_for_lambda.arn
+  filename      = "../backend/decrypt_data_key.zip"
 }

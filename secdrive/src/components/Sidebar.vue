@@ -17,6 +17,7 @@
   import { signOut, onAuthStateChanged } from 'firebase/auth'
   import { useUserStore } from '@/stores/userStore'
   import { toast } from 'vue-sonner'
+  import { clearEncryptionCache } from '@/utils/encryptionService'
 
   const firstName = ref('');
   const lastName = ref('');
@@ -36,6 +37,11 @@
       await signOut(auth);
       console.log('User logged out');
       await userStore.clearUserData();
+      
+      // Clear encryption cache for security
+      clearEncryptionCache();
+      console.log('Encryption cache cleared');
+      
       toast.success('Successfully logged out', { style: { backgroundColor: 'green' } });
       router.push('/login');
     } catch (error) {

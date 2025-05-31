@@ -1,32 +1,21 @@
 import json
 import boto3
+import base64
 from botocore.exceptions import ClientError
-from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    Lambda function to store file metadata in DynamoDB after successful S3 upload
+    Lambda function to decrypt data keys for client-side decryption using AWS KMS
     """
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('secdrive_user_files')
+    kms_client = boto3.client('kms')
     
     try:
         # Parse the request body
         body = json.loads(event['body'])
-        
-        # Required fields
-        file_id = body.get('file_id')
         user_id = body.get('user_id')
-        file_name = body.get('file_name')
-        file_size = body.get('file_size')
-        s3_key = body.get('s3_key')
+        encrypted_key_b64 = body.get('encrypted_key')
         
-        # Optional fields
-        content_type = body.get('content_type', 'application/octet-stream')
-        encrypted_key = body.get('encrypted_key')  # Base64 encoded encrypted data key
-        file_extension = file_name.split('.')[-1] if '.' in file_name else ''
-        
-        if not all([file_id, user_id, file_name, file_size, s3_key]):
+        if not user_id or not encrypted_key_b64:
             return {
                 'statusCode': 400,
                 'headers': {
@@ -34,35 +23,24 @@ def lambda_handler(event, context):
                     'Access-Control-Allow-Headers': 'Content-Type',
                     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
                 },
-                'body': json.dumps({
-                    'error': 'file_id, user_id, file_name, file_size, and s3_key are required'
-                })
+                'body': json.dumps({'error': 'user_id and encrypted_key are required'})
             }
         
-        # Create timestamp
-        timestamp = datetime.utcnow().isoformat()
+        # Decode the encrypted key from base64
+        encrypted_key = base64.b64decode(encrypted_key_b64)
         
-        # Store file metadata in DynamoDB
-        item = {
-            'file_id': file_id,
-            'user_id': user_id,
-            'file_name': file_name,
-            'file_size': int(file_size),
-            's3_key': s3_key,
-            'content_type': content_type,
-            'extension': file_extension,
-            'upload_date': timestamp,
-            'is_folder': False
-        }
+        # Decrypt the data key using KMS
+        response = kms_client.decrypt(
+            CiphertextBlob=encrypted_key,
+            EncryptionContext={
+                'user_id': user_id,
+                'purpose': 'file_encryption'
+            }
+        )
         
-        # Add encrypted key if provided (for encrypted files)
-        if encrypted_key:
-            item['encrypted_key'] = encrypted_key
-            item['is_encrypted'] = True
-        else:
-            item['is_encrypted'] = False
-            
-        response = table.put_item(Item=item)
+        # Extract the plaintext key
+        plaintext_key = response['Plaintext']
+        plaintext_key_b64 = base64.b64encode(plaintext_key).decode('utf-8')
         
         return {
             'statusCode': 200,
@@ -72,13 +50,13 @@ def lambda_handler(event, context):
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
             },
             'body': json.dumps({
-                'message': 'File metadata stored successfully',
-                'file_id': file_id
+                'plaintext_key': plaintext_key_b64,
+                'key_id': response['KeyId']
             })
         }
         
     except ClientError as e:
-        print(f"DynamoDB ClientError: {str(e)}")
+        print(f"KMS ClientError: {str(e)}")
         return {
             'statusCode': 500,
             'headers': {
@@ -86,7 +64,7 @@ def lambda_handler(event, context):
                 'Access-Control-Allow-Headers': 'Content-Type',
                 'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
             },
-            'body': json.dumps({'error': f'Database Error: {str(e)}'})
+            'body': json.dumps({'error': f'KMS Error: {str(e)}'})
         }
     
     except json.JSONDecodeError:

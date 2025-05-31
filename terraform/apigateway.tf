@@ -110,6 +110,18 @@ resource "aws_apigatewayv2_integration" "get_user_profile_integration" { // Crea
   integration_type = "AWS_PROXY"
   integration_uri  = aws_lambda_function.get_user_profile.invoke_arn
 }
+
+resource "aws_apigatewayv2_integration" "generate_data_key_integration" { // Create an integration for generating data keys
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.generate_data_key.invoke_arn
+}
+
+resource "aws_apigatewayv2_integration" "decrypt_data_key_integration" { // Create an integration for decrypting data keys
+  api_id           = aws_apigatewayv2_api.api_gw_secdrive.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.decrypt_data_key.invoke_arn
+}
 resource "aws_apigatewayv2_route" "route_store_user_data" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "POST /storeUserData"
@@ -138,6 +150,18 @@ resource "aws_apigatewayv2_route" "route_get_user_profile" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "GET /getUserProfile"
   target    = "integrations/${aws_apigatewayv2_integration.get_user_profile_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "route_generate_data_key" {
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "POST /generateDataKey"
+  target    = "integrations/${aws_apigatewayv2_integration.generate_data_key_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "route_decrypt_data_key" {
+  api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
+  route_key = "POST /decryptDataKey"
+  target    = "integrations/${aws_apigatewayv2_integration.decrypt_data_key_integration.id}"
 }
 
 resource "aws_lambda_permission" "store_user_data_api_gateway_permission" {
@@ -176,6 +200,22 @@ resource "aws_lambda_permission" "get_user_profile_api_gateway_permission" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.get_user_profile.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "generate_data_key_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.generate_data_key.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "decrypt_data_key_api_gateway_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.decrypt_data_key.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.api_gw_secdrive.execution_arn}/*"
 }

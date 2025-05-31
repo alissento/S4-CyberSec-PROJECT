@@ -62,7 +62,9 @@ def lambda_handler(event, context):
                 'size': size_str,
                 'modified': modified_str,
                 'url': download_url,
-                'isFolder': False
+                'isFolder': False,
+                'isEncrypted': item.get('is_encrypted', False),
+                'encryptedKey': item.get('encrypted_key') if item.get('is_encrypted', False) else None
             })
         
         return {
