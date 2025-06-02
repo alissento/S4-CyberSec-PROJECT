@@ -57,6 +57,15 @@ resource "aws_s3_bucket_cors_configuration" "s3_user_data_cors" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST", "DELETE"]
+    allowed_origins = ["https://nknez.tech", "http://localhost:5174", "http://localhost:5173"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+  
+  # Fallback rule for any other origins (less specific)
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET"]
     allowed_origins = ["*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000

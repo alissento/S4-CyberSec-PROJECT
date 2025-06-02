@@ -148,11 +148,27 @@ export async function downloadAndDecryptFile(
   try {
     console.log('Starting download and decrypt for:', fileName);
     console.log('Download URL:', url);
+    console.log('Current origin:', window.location.origin);
     
     // Download the encrypted file
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit'
+    });
+    
+    console.log('Fetch response status:', response.status);
+    console.log('Fetch response headers:', [...response.headers.entries()]);
+    
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.statusText}`);
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('Download failed with details:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: [...response.headers.entries()],
+        body: errorText
+      });
+      throw new Error(`Download failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
     
     const encryptedBuffer = await response.arrayBuffer();

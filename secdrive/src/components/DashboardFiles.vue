@@ -414,15 +414,43 @@ async function handleDownload(event: Event, file: FileItem) {
     } else {
       // Handle unencrypted file download (legacy files)
       console.log(`Downloading unencrypted file: ${file.name} from ${file.url}`);
+      console.log('Current origin:', window.location.origin);
       
-      const link = document.createElement('a');
-      link.href = file.url;
-      link.download = file.name;
-      link.target = '_blank';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        // Test if the URL is accessible first
+        const testResponse = await fetch(file.url, { method: 'HEAD', mode: 'cors' });
+        console.log('URL accessibility test:', testResponse.status, testResponse.statusText);
+        
+        if (!testResponse.ok) {
+          throw new Error(`File not accessible: ${testResponse.status} ${testResponse.statusText}`);
+        }
+        
+        const link = document.createElement('a');
+        link.href = file.url;
+        link.download = file.name;
+        link.target = '_blank';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.success(`Successfully downloaded ${file.name}`);
+      } catch (fetchError) {
+        console.error('URL accessibility test failed:', fetchError);
+        
+        // Fallback: try direct download anyway
+        console.log('Attempting direct download as fallback...');
+        const link = document.createElement('a');
+        link.href = file.url;
+        link.download = file.name;
+        link.target = '_blank';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast.warning(`Download initiated - if it fails, there may be a CORS issue`);
+      }
     }
   } catch (error) {
     console.error('Download failed:', error);
