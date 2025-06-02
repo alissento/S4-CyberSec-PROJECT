@@ -2,11 +2,11 @@ resource "aws_cloudfront_distribution" "s3_distribution" { // Define the CloudFr
   provider = aws.us-east-1                                 // Use the alias AWS provider for the us-east-1 region 
 
   aliases = [local.domain_name] // Define the domain name for the CloudFront distribution 
+  web_acl_id   = aws_wafv2_web_acl.cloudfront_waf.arn
 
   origin { // Define the origin for the CloudFront distribution 
     domain_name = "nknez.tech.s3-website.eu-central-1.amazonaws.com"
     origin_id   = "S3-Website-nknez.tech"
-
     custom_origin_config {
       http_port              = 80
       https_port             = 443
@@ -53,7 +53,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" { // Define the CloudFr
     minimum_protocol_version = "TLSv1.2_2021"
   }
 
-  depends_on = [aws_acm_certificate_validation.tls_cert_validation]
+  depends_on = [aws_acm_certificate_validation.tls_cert_validation, aws_wafv2_web_acl.cloudfront_waf]
 }
 
 resource "aws_acm_certificate" "tls-cert" { // Define the ACM certificate for the CloudFront distribution 

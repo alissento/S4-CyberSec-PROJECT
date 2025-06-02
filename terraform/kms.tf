@@ -1,4 +1,4 @@
-# KMS Key for client-side encryption
+// KMS Key for client-side encryption
 resource "aws_kms_key" "secdrive_encryption_key" {
   description             = "KMS key for SecDrive client-side encryption"
   deletion_window_in_days = 7
@@ -16,18 +16,24 @@ resource "aws_kms_key" "secdrive_encryption_key" {
         Resource = "*"
       },
       {
-        Sid    = "Allow Lambda functions to use the key"
+        Sid    = "Allow generate_data_key Lambda to use the key"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.iam_for_lambda.arn
+          AWS = aws_iam_role.generate_data_key_role.arn
         }
         Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:CreateGrant",
-          "kms:DescribeKey"
+          "kms:GenerateDataKey"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow decrypt_data_key Lambda to use the key"
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.decrypt_data_key_role.arn
+        }
+        Action = [
+          "kms:Decrypt"
         ]
         Resource = "*"
       }
