@@ -12,9 +12,9 @@ export interface DecryptKeyResponse {
   key_id: string;
 }
 
-/**
- * Generate a new data key for encrypting files
- */
+
+ // Generate a new data key for encrypting files
+
 export async function generateDataKey(userId: string): Promise<DataKeyResponse> {
   try {
     const response = await api.post('/generateDataKey', {
@@ -28,9 +28,9 @@ export async function generateDataKey(userId: string): Promise<DataKeyResponse> 
   }
 }
 
-/**
- * Decrypt a data key for decrypting files
- */
+
+ // Decrypt a data key for decrypting files
+
 export async function decryptDataKey(userId: string, encryptedKey: string): Promise<DecryptKeyResponse> {
   try {
     const response = await api.post('/decryptDataKey', {
@@ -45,9 +45,8 @@ export async function decryptDataKey(userId: string, encryptedKey: string): Prom
   }
 }
 
-/**
- * Get or generate a crypto key for the user session
- */
+// Get or generate a crypto key for the user session
+
 export async function getCryptoKey(userId: string): Promise<{ cryptoKey: CryptoKey; encryptedKey: string }> {
   // Check if we have a key cached in session storage
   const cachedKey = sessionStorage.getItem(`encryption_key_${userId}`);
@@ -74,9 +73,8 @@ export async function getCryptoKey(userId: string): Promise<{ cryptoKey: CryptoK
   return { cryptoKey, encryptedKey: keyData.encrypted_key };
 }
 
-/**
- * Get a crypto key for decryption using an encrypted key
- */
+
+ // Get a crypto key for decryption using an encrypted key
 export async function getCryptoKeyForDecryption(userId: string, encryptedKey: string): Promise<CryptoKey> {
   // Check if we have this specific key cached
   const cacheKey = `decryption_key_${encryptedKey.substring(0, 16)}`;
@@ -101,9 +99,9 @@ export async function getCryptoKeyForDecryption(userId: string, encryptedKey: st
   return cryptoKey;
 }
 
-/**
- * Clear all cached encryption keys
- */
+
+ // Clear all cached encryption keys
+
 export function clearEncryptionCache(): void {
   const keys = Object.keys(sessionStorage);
   keys.forEach(key => {

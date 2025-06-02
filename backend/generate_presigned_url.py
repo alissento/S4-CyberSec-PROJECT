@@ -5,9 +5,6 @@ import uuid
 from datetime import datetime
 
 def lambda_handler(event, context):
-    """
-    Lambda function to generate pre-signed URLs for S3 file uploads
-    """
     s3_client = boto3.client('s3')
     bucket_name = 'secdrive-user-files-nknez'
     

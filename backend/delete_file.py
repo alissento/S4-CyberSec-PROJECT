@@ -3,9 +3,6 @@ import boto3
 from botocore.exceptions import ClientError
 
 def lambda_handler(event, context):
-    """
-    Lambda function to delete files from S3 and remove metadata from DynamoDB
-    """
     dynamodb = boto3.resource('dynamodb')
     s3_client = boto3.client('s3')
     files_table = dynamodb.Table('secdrive_user_files')

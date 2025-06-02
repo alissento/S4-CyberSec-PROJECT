@@ -1,7 +1,4 @@
-/**
- * Client-side encryption utilities using Web Crypto API
- */
-
+// Client-side encryption utilities using Web Crypto API
 export interface EncryptionResult {
   encryptedData: ArrayBuffer;
   iv: ArrayBuffer;
@@ -13,9 +10,7 @@ export interface DecryptionParams {
   iv: ArrayBuffer;
 }
 
-/**
- * Convert base64 string to ArrayBuffer
- */
+ // Convert base64 string to ArrayBuffer
 export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
@@ -25,9 +20,7 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-/**
- * Convert ArrayBuffer to base64 string
- */
+ // Convert ArrayBuffer to base64 string
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binaryString = '';
@@ -37,9 +30,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binaryString);
 }
 
-/**
- * Import a raw key from base64 string for AES-GCM encryption
- */
+ // Import a raw key from base64 string for AES-GCM encryption
 export async function importKeyFromBase64(keyData: string): Promise<CryptoKey> {
   const keyBuffer = base64ToArrayBuffer(keyData);
   
@@ -52,9 +43,7 @@ export async function importKeyFromBase64(keyData: string): Promise<CryptoKey> {
   );
 }
 
-/**
- * Encrypt a file using AES-GCM
- */
+ // Encrypt a file using AES-GCM
 export async function encryptFile(file: File, key: CryptoKey): Promise<EncryptionResult> {
   // Generate a random IV (Initialization Vector)
   const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
@@ -78,9 +67,7 @@ export async function encryptFile(file: File, key: CryptoKey): Promise<Encryptio
   };
 }
 
-/**
- * Decrypt file data using AES-GCM
- */
+ // Decrypt file data using AES-GCM
 export async function decryptFileData(params: DecryptionParams): Promise<ArrayBuffer> {
   const decryptedData = await crypto.subtle.decrypt(
     {
@@ -94,9 +81,8 @@ export async function decryptFileData(params: DecryptionParams): Promise<ArrayBu
   return decryptedData;
 }
 
-/**
- * Create an encrypted blob that includes the IV and encrypted data
- */
+ // Create an encrypted blob that includes the IV and encrypted data
+
 export function createEncryptedBlob(encryptedData: ArrayBuffer, iv: ArrayBuffer): Blob {
   // Create a structure that includes both IV and encrypted data
   const ivArray = new Uint8Array(iv);
@@ -110,9 +96,8 @@ export function createEncryptedBlob(encryptedData: ArrayBuffer, iv: ArrayBuffer)
   return new Blob([combined], { type: 'application/octet-stream' });
 }
 
-/**
- * Extract IV and encrypted data from an encrypted blob
- */
+
+ // Extract IV and encrypted data from an encrypted blob
 export async function extractFromEncryptedBlob(blob: Blob): Promise<{ iv: ArrayBuffer; encryptedData: ArrayBuffer }> {
   const buffer = await blob.arrayBuffer();
   const array = new Uint8Array(buffer);
@@ -124,9 +109,8 @@ export async function extractFromEncryptedBlob(blob: Blob): Promise<{ iv: ArrayB
   return { iv, encryptedData };
 }
 
-/**
- * Extract IV and encrypted data from a downloaded encrypted file
- */
+ // Extract IV and encrypted data from a downloaded encrypted file
+
 export async function extractFromEncryptedArrayBuffer(buffer: ArrayBuffer): Promise<{ iv: ArrayBuffer; encryptedData: ArrayBuffer }> {
   const array = new Uint8Array(buffer);
   
@@ -137,9 +121,8 @@ export async function extractFromEncryptedArrayBuffer(buffer: ArrayBuffer): Prom
   return { iv, encryptedData };
 }
 
-/**
- * Download and decrypt a file
- */
+ // Download and decrypt a file
+
 export async function downloadAndDecryptFile(
   url: string, 
   fileName: string, 

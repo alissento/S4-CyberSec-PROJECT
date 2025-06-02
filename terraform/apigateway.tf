@@ -24,7 +24,7 @@ resource "aws_acm_certificate" "tls_cert_api" { // Create a certificate for the 
   }
 }
 
-resource "aws_route53_record" "tls_cert_api_validation_cname" {
+resource "aws_route53_record" "tls_cert_api_validation_cname" { // Create DNS records for certificate validation
   for_each = {
     for dvo in aws_acm_certificate.tls_cert_api.domain_validation_options :
     dvo.domain_name => {
@@ -129,6 +129,7 @@ resource "aws_apigatewayv2_integration" "delete_file_integration" { // Create an
   integration_uri  = aws_lambda_function.delete_file.invoke_arn
 }
 
+// Define the routes for the API Gateway
 resource "aws_apigatewayv2_route" "route_store_user_data" {
   api_id    = aws_apigatewayv2_api.api_gw_secdrive.id
   route_key = "POST /storeUserData"

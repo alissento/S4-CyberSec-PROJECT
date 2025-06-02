@@ -4,9 +4,6 @@ from botocore.exceptions import ClientError
 from datetime import datetime
 
 def lambda_handler(event, context):
-    """
-    Lambda function to store file metadata in DynamoDB after successful S3 upload
-    """
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('secdrive_user_files')
     

@@ -62,7 +62,6 @@ resource "aws_s3_bucket_cors_configuration" "s3_user_data_cors" {
     max_age_seconds = 3000
   }
   
-  # Fallback rule for any other origins (less specific)
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET"]

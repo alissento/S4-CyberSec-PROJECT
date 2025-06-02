@@ -234,7 +234,6 @@ async function uploadSelectedFiles() {
       throw new Error('User not authenticated');
     }
     
-    // Calculate steps per file: encrypt (25%) + get presigned URL (25%) + upload (40%) + confirm (10%)
     const stepsPerFile = 4;
     const totalSteps = totalFiles * stepsPerFile;
     let currentStep = 0;
@@ -249,7 +248,6 @@ async function uploadSelectedFiles() {
       await uploadFileWithPresignedUrl(selectedFile.file, user.uid, updateProgress, () => currentStep++);
     }
     
-    // Clear selected files and close dialog
     selectedFiles.value = [];
     isUploadDialogOpen.value = false;
     currentUploadFile.value = '';
@@ -258,7 +256,6 @@ async function uploadSelectedFiles() {
     console.log('All files uploaded successfully');
     toast.success(`Successfully uploaded ${totalFiles} file${totalFiles > 1 ? 's' : ''}`);
     
-    // Refresh file list after upload
     await loadUserFiles();
     
   } catch (error) {
@@ -275,14 +272,13 @@ async function uploadSelectedFiles() {
 
 async function uploadFileWithPresignedUrl(file: File, userId: string, updateProgress: () => void, incrementStep: () => void): Promise<void> {
   try {
-    // Step 1: Get encryption key for this user (25% of file progress)
+
     currentUploadStep.value = 'Getting encryption key...';
     const { cryptoKey, encryptedKey } = await getCryptoKey(userId);
     incrementStep();
     updateProgress();
     await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
     
-    // Step 2: Encrypt the file (25% of file progress)
     currentUploadStep.value = 'Encrypting file...';
     toast.info(`Encrypting ${file.name}...`);
     const encryptionResult = await encryptFile(file, cryptoKey);
@@ -291,7 +287,6 @@ async function uploadFileWithPresignedUrl(file: File, userId: string, updateProg
     updateProgress();
     await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
     
-    // Step 3: Request pre-signed URL from backend (25% of file progress)
     currentUploadStep.value = 'Requesting upload URL...';
     const response = await api.post('/generatePresignedUrl', {
       user_id: userId,
@@ -305,7 +300,6 @@ async function uploadFileWithPresignedUrl(file: File, userId: string, updateProg
     updateProgress();
     await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to see progress
 
-    // Step 4: Upload encrypted file directly to S3 using pre-signed URL (25% of file progress)
     currentUploadStep.value = 'Uploading to cloud...';
     toast.info(`Uploading encrypted ${file.name}...`);
     await fetch(presigned_url, {
@@ -316,7 +310,6 @@ async function uploadFileWithPresignedUrl(file: File, userId: string, updateProg
       }
     });
 
-    // Step 5: Confirm upload and store metadata with encryption info
     currentUploadStep.value = 'Finalizing upload...';
     await api.post('/confirmUpload', {
       file_id,
@@ -737,7 +730,6 @@ onMounted(() => {
           </DialogHeader>
           
           <div class="space-y-4">
-            <!-- File Input (Hidden) -->
             <input
               ref="fileInputRef"
               type="file"
@@ -747,7 +739,6 @@ onMounted(() => {
               accept="*/*"
             />
             
-            <!-- Upload Area -->
             <div 
               class="border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer"
               :class="[
@@ -770,7 +761,6 @@ onMounted(() => {
               </Button>
             </div>
             
-            <!-- Selected Files Preview -->
             <div v-if="selectedFiles.length > 0" class="space-y-4">
               <div class="flex items-center justify-between">
                 <Label class="text-base font-medium">Selected Files ({{ selectedFiles.length }})</Label>
@@ -783,7 +773,6 @@ onMounted(() => {
                   :key="selectedFile.id"
                   class="flex items-center gap-3 p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
                 >
-                  <!-- File Icon/Preview -->
                   <div class="flex-shrink-0">
                     <img
                       v-if="selectedFile.preview"
@@ -798,7 +787,6 @@ onMounted(() => {
                     />
                   </div>
                   
-                  <!-- File Info -->
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium truncate" :title="selectedFile.file.name">
                       {{ selectedFile.file.name }}
@@ -808,7 +796,6 @@ onMounted(() => {
                     </p>
                   </div>
                   
-                  <!-- Remove Button -->
                   <Button
                     type="button"
                     variant="ghost"
@@ -823,14 +810,12 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- Upload Progress -->
             <div v-if="isUploading" class="space-y-3">
               <div class="flex items-center justify-between">
                 <Label class="text-sm">Uploading files...</Label>
                 <span class="text-sm text-muted-foreground">{{ Math.round(uploadProgress) }}%</span>
               </div>
               
-              <!-- Custom Progress Bar -->
               <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div 
                   class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-300 ease-out"
@@ -840,7 +825,6 @@ onMounted(() => {
                 </div>
               </div>
               
-              <!-- Current file and step details -->
               <div v-if="currentUploadFile" class="space-y-1">
                 <div class="flex items-center justify-between text-xs text-muted-foreground">
                   <span class="truncate" :title="currentUploadFile">
@@ -897,7 +881,6 @@ onMounted(() => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <!-- Loading Skeleton -->
           <template v-if="isLoadingFiles">
             <TableRow v-for="i in 5" :key="`skeleton-${i}`" class="hover:bg-muted/50">
               <TableCell>
@@ -924,7 +907,6 @@ onMounted(() => {
             </TableRow>
           </template>
 
-          <!-- Actual File Rows -->
           <template v-else>
             <TableRow
                v-for="file in files"

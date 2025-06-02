@@ -4,9 +4,6 @@ import base64
 from botocore.exceptions import ClientError
 
 def lambda_handler(event, context):
-    """
-    Lambda function to decrypt data keys for client-side decryption using AWS KMS
-    """
     kms_client = boto3.client('kms')
     
     try:

@@ -1,4 +1,4 @@
-# WAF Web ACL for CloudFront protection
+// WAF Web ACL for CloudFront protection
 resource "aws_wafv2_web_acl" "cloudfront_waf" {
   provider = aws.us-east-1
   name     = "cloudfront-protection-waf"
@@ -8,7 +8,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     allow {}
   }
 
-  # AWS Managed Rules - Core Rule Set
+  // AWS Managed Rules - Core Rule Set
   rule {
     name     = "AWS-AWSManagedRulesCommonRuleSet"
     priority = 1
@@ -31,7 +31,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     }
   }
 
-  # AWS Managed Rules - Known Bad Inputs
+  // AWS Managed Rules - Known Bad Inputs
   rule {
     name     = "AWS-AWSManagedRulesKnownBadInputsRuleSet"
     priority = 2
@@ -54,7 +54,7 @@ resource "aws_wafv2_web_acl" "cloudfront_waf" {
     }
   }
 
-  # Rate limiting rule
+  // Rate limiting rule (for DDOS)
   rule {
     name     = "RateLimitRule"
     priority = 3
