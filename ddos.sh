@@ -3,7 +3,7 @@
 # --- Configuration ---
 TARGET_URL="https://nknez.tech/dashboard"                   # URL to target for the DDoS simulation
 NUM_REQUESTS=2000                                           # Total number of requests to send
-MAX_CONCURRENT_CLIENT_JOBS=50                               # Max concurrent curl processes from THIS client machine
+MAX_CONCURRENT_CLIENT_JOBS=50                               # Max concurrent curl processes
 
 # --- WARNING ---
 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
