@@ -1,13 +1,24 @@
 // This file is used to create the API Gateway for the project
-resource "aws_apigatewayv2_api" "api_gw_secdrive" { // Create an API Gateway
-  name          = "api-gateway-secdrive"            // The name of the API Gateway
-  protocol_type = "HTTP"                            // The protocol used by the API Gateway
+resource "aws_apigatewayv2_api" "api_gw_secdrive" { 
+  name          = "api-gateway-secdrive"           
+  protocol_type = "HTTP"                            
 
   cors_configuration {
-    allow_origins = ["http://localhost:5174", "http://localhost:5173", "https://nknez.tech", "*"]
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allow_headers = ["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key", "X-Amz-Security-Token", "X-Amz-User-Agent"]
-    expose_headers = ["ETag"]
+    allow_origins = ["https://${local.domain_name}"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"]
+    allow_headers = [
+      "Content-Type", 
+      "Authorization", 
+      "X-Api-Key",
+      "X-Amz-Date", 
+      "X-Amz-Security-Token", 
+      "X-Amz-User-Agent",
+      "X-Amz-Content-Sha256",
+      "Access-Control-Allow-Origin",
+      "Access-Control-Allow-Headers",
+      "Access-Control-Allow-Methods"
+    ]
+    expose_headers = ["ETag", "X-Amz-Request-Id"]
     max_age = 86400
     allow_credentials = false
   }

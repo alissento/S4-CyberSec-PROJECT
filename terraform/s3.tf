@@ -55,19 +55,27 @@ resource "aws_s3_bucket_cors_configuration" "s3_user_data_cors" {
   bucket = aws_s3_bucket.s3_user_data.id
   
   cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "PUT", "POST", "DELETE"]
-    allowed_origins = ["https://nknez.tech", "http://localhost:5174", "http://localhost:5173"]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3000
-  }
-  
-  cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET"]
-    allowed_origins = ["*"]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3000
+    allowed_headers = [
+      "*",
+      "Content-Type", 
+      "Content-MD5", 
+      "Authorization", 
+      "X-Amz-Date", 
+      "X-Amz-Security-Token",
+      "X-Amz-User-Agent",
+      "x-amz-content-sha256"
+    ]
+    allowed_methods = ["GET", "PUT", "POST", "DELETE", "HEAD"]
+    allowed_origins = ["https://${local.domain_name}"]
+    expose_headers  = [
+      "ETag", 
+      "x-amz-version-id", 
+      "x-amz-request-id",
+      "x-amz-id-2",
+      "Date",
+      "Last-Modified"
+    ]
+    max_age_seconds = 3600
   }
 }
 

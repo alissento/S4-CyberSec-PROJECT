@@ -1,21 +1,15 @@
 #!/bin/bash
 
 # --- Configuration ---
-TARGET_URL="https://nknez.tech/dashboard"                   # URL to target for the DDoS simulation
-NUM_REQUESTS=2000                                           # Total number of requests to send
-MAX_CONCURRENT_CLIENT_JOBS=50                               # Max concurrent curl processes
+TARGET_URL="https://nknez.tech/dashboard"
+NUM_REQUESTS=2000
+MAX_CONCURRENT_CLIENT_JOBS=50
 
 # --- WARNING ---
 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo "!!! WARNING: This script will send $NUM_REQUESTS requests to $TARGET_URL"
 echo "!!! with up to $MAX_CONCURRENT_CLIENT_JOBS concurrent connections from this machine."
-echo "!!!"
-echo "!!!           >>> ONLY RUN THIS AGAINST SYSTEMS YOU OWN <<<           !!!"
-echo "!!!      AND HAVE EXPLICIT PERMISSION TO TEST IN THIS MANNER.       !!!"
-echo "!!!"
-echo "!!! Misuse can lead to your IP being blocked or other consequences. !!!"
-echo "!!! This can also put load on your own infrastructure.              !!!"
-echo "!!!"
+echo "!!! This is a simulated DDoS test and should only be run against your own systems"
 echo "!!! Press Ctrl+C within 7 seconds to ABORT.                         !!!"
 echo "!!! Or press Enter to CONTINUE...                                   !!!"
 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -33,28 +27,18 @@ echo "Starting DDoS simulation against $TARGET_URL..."
 echo "Sending $NUM_REQUESTS requests in total."
 echo "Limiting concurrent jobs from this client to $MAX_CONCURRENT_CLIENT_JOBS."
 
-# Temporary file to store all HTTP status codes
 STATUS_CODES_FILE=$(mktemp)
 
-# Counter for launched requests
 launched_count=0
 
 for i in $(seq 1 "$NUM_REQUESTS")
 do
-    # Limit the number of concurrent background jobs initiated by this script
     while (( $(jobs -p | wc -l) >= MAX_CONCURRENT_CLIENT_JOBS )); do
-        sleep 0.1 # Wait a bit for a job to finish
-    done
+        sleep 0.1
 
-    # Run curl in the background
     (
-        # -s: silent mode (no progress meter)
-        # -o /dev/null: discard response body
-        # -w "%{http_code}": output only the HTTP status code
-        # --connect-timeout 5: max time to connect
-        # -m 10: max time for the whole operation
         status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 -m 10 "$TARGET_URL")
-        echo "Request $i: Status $status_code" # This output will be interleaved
+        echo "Request $i: Status $status_code"
         echo "$status_code" >> "$STATUS_CODES_FILE"
     ) &
 
@@ -65,7 +49,7 @@ do
 done
 
 echo "All $NUM_REQUESTS request processes have been launched. Waiting for them to complete..."
-wait # Wait for all backgrounded curl jobs to finish
+wait
 
 echo -e "\n--- Summary of HTTP Status Codes ---"
 if [ -s "$STATUS_CODES_FILE" ]; then
@@ -75,7 +59,6 @@ else
 fi
 echo "------------------------------------"
 
-# Clean up
 rm "$STATUS_CODES_FILE"
 
 echo "Test finished."
